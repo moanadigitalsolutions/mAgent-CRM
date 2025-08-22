@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Customer - mAgent CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">Customers</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_detail' customer.id %}">{{ customer.full_name }}</a></li>
+                <li class="breadcrumb-item active">Delete</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0 text-danger">Delete Customer</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+            </h5>
+            <p>Are you sure you want to delete <strong>{{ customer.full_name }}</strong>?</p>
+            <p class="mb-0">This action will deactivate the customer but preserve their data for historical purposes.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Customer Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>Name:</strong></div>
+                    <div class="col-sm-8">{{ customer.full_name }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Email:</strong></div>
+                    <div class="col-sm-8">{{ customer.email }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Mobile:</strong></div>
+                    <div class="col-sm-8">{{ customer.mobile }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4"><strong>City:</strong></div>
+                    <div class="col-sm-8">{{ customer.city }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Created:</strong></div>
+                    <div class="col-sm-8">{{ customer.created_at|date:"M d, Y" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'customers:customer_detail' customer.id %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Delete Customer
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Custom Fields - mAgent CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-list-ul text-primary"></i> Custom Fields
+        </h1>
+        <p class="text-muted mb-0">Manage additional fields for customer profiles</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:custom_field_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-square"></i> Add Custom Field
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    {% if custom_fields %}
+        {% for field in custom_fields %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="custom-field-item h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="fw-bold mb-0">{{ field.label }}</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-link btn-sm" data-bs-toggle="dropdown" aria-label="Actions">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'customers:custom_field_edit' field.id %}">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{% url 'customers:custom_field_delete' field.id %}">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mb-2">
+                    <small class="text-muted">Field Name:</small>
+                    <code class="small">{{ field.name }}</code>
+                </div>
+                
+                <div class="mb-2">
+                    <small class="text-muted">Type:</small>
+                    <span class="badge bg-secondary">{{ field.get_field_type_display }}</span>
+                </div>
+                
+                {% if field.options %}
+                <div class="mb-2">
+                    <small class="text-muted">Options:</small>
+                    <div class="small">{{ field.options }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="mb-2">
+                    {% if field.is_required %}
+                        <span class="badge bg-warning">Required</span>
+                    {% endif %}
+                    {% if field.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+                
+                <div class="text-muted small">
+                    Created: {{ field.created_at|date:"M d, Y" }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-list-ul fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No custom fields yet</h5>
+                <p class="text-muted">Create custom fields to capture additional customer information</p>
+                <a href="{% url 'customers:custom_field_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-square"></i> Create First Custom Field
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% if custom_fields %}
+<div class="mt-4">
+    <div class="alert alert-info">
+        <h6 class="alert-heading">
+            <i class="bi bi-info-circle"></i> Custom Field Usage
+        </h6>
+        <ul class="mb-0">
+            <li>Custom fields appear in customer detail views and can be edited inline in the customer list</li>
+            <li>Inactive fields are hidden from customers but data is preserved</li>
+            <li>Required fields must be filled when creating or editing customers</li>
+            <li>Dropdown fields use the options you specify, separated by commas</li>
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - mAgent CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-speedometer2 text-primary"></i> Dashboard
+        </h1>
+        <p class="text-muted mb-0">Welcome to mAgent - Your Customer Relationship Manager</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:customer_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add Customer
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Overview -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card text-primary">
+            <div class="stat-number">{{ total_customers }}</div>
+            <div class="stat-label">Total Customers</div>
+            <div class="mt-2">
+                <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-primary btn-sm">
+                    View All
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card text-success">
+            <div class="stat-number">{{ city_stats|length }}</div>
+            <div class="stat-label">Cities Covered</div>
+            <div class="mt-2">
+                <small class="text-muted">Across New Zealand</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card text-info">
+            <div class="stat-number">{{ custom_fields_count }}</div>
+            <div class="stat-label">Custom Fields</div>
+            <div class="mt-2">
+                <a href="{% url 'customers:custom_field_list' %}" class="btn btn-outline-info btn-sm">
+                    Manage
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card text-warning">
+            <div class="stat-number">{{ recent_files.count }}</div>
+            <div class="stat-label">Recent Files</div>
+            <div class="mt-2">
+                <small class="text-muted">Last 7 days</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Customers -->
+    <div class="col-lg-6 mb-4">
+        <div class="customer-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Recent Customers
+                </h5>
+                <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-primary btn-sm">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_customers %}
+                    {% for customer in recent_customers %}
+                    <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 40px; height: 40px;">
+                                <span class="text-white fw-bold">
+                                    {{ customer.first_name|first }}{{ customer.last_name|first }}
+                                </span>
+                            </div>
+                            <div>
+                                <div class="fw-medium">{{ customer.full_name }}</div>
+                                <div class="text-muted small">{{ customer.email }}</div>
+                                <div class="text-muted small">{{ customer.city }}</div>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted small">{{ customer.created_at|timesince }} ago</div>
+                            <a href="{% url 'customers:customer_detail' customer.id %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-people fs-1 text-muted mb-3"></i>
+                        <h6 class="text-muted">No customers yet</h6>
+                        <p class="text-muted small">Get started by adding your first customer</p>
+                        <a href="{% url 'customers:customer_create' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-person-plus"></i> Add Customer
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- City Distribution -->
+    <div class="col-lg-6 mb-4">
+        <div class="customer-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-geo-alt"></i> Customers by City
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if city_stats %}
+                    {% for city, count in city_stats.items %}
+                    <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+                            <span class="fw-medium">{{ city }}</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary rounded-pill me-2">{{ count }}</span>
+                            <a href="{% url 'customers:customer_list' %}?city={{ city }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-geo fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">No location data available</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Files -->
+{% if recent_files %}
+<div class="row">
+    <div class="col-12">
+        <div class="customer-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark"></i> Recent Files
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for file in recent_files %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-{% if file.file_type == 'image' %}image{% elif file.file_type == 'document' %}file-text{% elif file.file_type == 'video' %}play-circle{% elif file.file_type == 'audio' %}music-note{% else %}file{% endif %} text-primary me-2"></i>
+                                <span class="fw-medium small">{{ file.file.name|cut:"customer_files/"|truncatechars:20 }}</span>
+                            </div>
+                            <div class="text-muted small mb-2">
+                                Customer: <a href="{% url 'customers:customer_detail' file.customer.id %}" class="text-decoration-none">
+                                    {{ file.customer.full_name }}
+                                </a>
+                            </div>
+                            <div class="text-muted small">
+                                {{ file.uploaded_at|timesince }} ago • {{ file.file_size }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="customer-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'customers:customer_create' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                            <i class="bi bi-person-plus fs-1 mb-2"></i>
+                            <span>Add Customer</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                            <i class="bi bi-people fs-1 mb-2"></i>
+                            <span>View All Customers</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'customers:custom_field_create' %}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                            <i class="bi bi-plus-square fs-1 mb-2"></i>
+                            <span>Add Custom Field</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="/admin/" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                            <i class="bi bi-gear fs-1 mb-2"></i>
+                            <span>Admin Panel</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add some animation to the stat cards
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load customer_extras %}
+
+{% block title %}{{ title }} - mAgent CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">Customers</a></li>
+                {% if customer %}
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_detail' customer.id %}">{{ customer.full_name }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+                {% else %}
+                <li class="breadcrumb-item active">Add Customer</li>
+                {% endif %}
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0">{{ title }}</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="customer-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-circle"></i> Customer Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                    First Name <span class="text-danger">*</span>
+                                </label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.first_name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                    Last Name <span class="text-danger">*</span>
+                                </label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.last_name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">
+                                    Email Address <span class="text-danger">*</span>
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.email.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Primary contact email for this customer</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.mobile.id_for_label }}" class="form-label">
+                                    Mobile Phone <span class="text-danger">*</span>
+                                </label>
+                                {{ form.mobile }}
+                                {% if form.mobile.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.mobile.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">New Zealand mobile number (e.g., +64211234567)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">
+                        <i class="bi bi-geo-alt"></i> Address Information
+                    </h6>
+
+                    <div class="mb-3">
+                        <label for="{{ form.street_address.id_for_label }}" class="form-label">
+                            Street Address <span class="text-danger">*</span>
+                        </label>
+                        {{ form.street_address }}
+                        {% if form.street_address.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.street_address.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.suburb.id_for_label }}" class="form-label">
+                                    Suburb <span class="text-danger">*</span>
+                                </label>
+                                {{ form.suburb }}
+                                {% if form.suburb.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.suburb.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.city.id_for_label }}" class="form-label">
+                                    City <span class="text-danger">*</span>
+                                </label>
+                                {{ form.city }}
+                                {% if form.city.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.city.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Major New Zealand city</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.postcode.id_for_label }}" class="form-label">
+                                    Postcode <span class="text-danger">*</span>
+                                </label>
+                                {{ form.postcode }}
+                                {% if form.postcode.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.postcode.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">4-digit New Zealand postcode</div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        Active Customer
+                                    </label>
+                                </div>
+                                <div class="form-text">Uncheck to deactivate this customer</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Custom Fields Section -->
+                    {% if custom_fields %}
+                    <h6 class="mb-3">
+                        <i class="bi bi-sliders"></i> Custom Fields
+                    </h6>
+                    
+                    <div class="row">
+                        {% for field in custom_fields %}
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="custom_{{ field.pk }}" class="form-label">
+                                    {{ field.label }}
+                                    {% if field.is_required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                
+                                {% if field.field_type == 'select' %}
+                                    <select name="custom_{{ field.pk }}" id="custom_{{ field.pk }}" 
+                                            class="form-select" {% if field.is_required %}required{% endif %}>
+                                        <option value="">-- Select {{ field.label }} --</option>
+                                        {% for option in field.get_options_list %}
+                                            <option value="{{ option }}" 
+                                                    {% if custom_values|get_item:field.pk == option %}selected{% endif %}>
+                                                {{ option }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                {% elif field.field_type == 'textarea' %}
+                                    <textarea name="custom_{{ field.pk }}" id="custom_{{ field.pk }}" 
+                                              class="form-control" rows="3" 
+                                              {% if field.is_required %}required{% endif %}>{{ custom_values|get_item:field.pk }}</textarea>
+                                {% elif field.field_type == 'boolean' %}
+                                    <div class="form-check">
+                                        <input type="checkbox" name="custom_{{ field.pk }}" id="custom_{{ field.pk }}" 
+                                               class="form-check-input" value="true"
+                                               {% if custom_values|get_item:field.pk == 'true' %}checked{% endif %}>
+                                        <label class="form-check-label" for="custom_{{ field.pk }}">
+                                            Yes
+                                        </label>
+                                    </div>
+                                {% elif field.field_type == 'date' %}
+                                    <input type="date" name="custom_{{ field.pk }}" id="custom_{{ field.pk }}" 
+                                           class="form-control" value="{{ custom_values|get_item:field.pk }}"
+                                           {% if field.is_required %}required{% endif %}>
+                                {% elif field.field_type == 'number' %}
+                                    <input type="number" name="custom_{{ field.pk }}" id="custom_{{ field.pk }}" 
+                                           class="form-control" value="{{ custom_values|get_item:field.pk }}"
+                                           {% if field.is_required %}required{% endif %}>
+                                {% elif field.field_type == 'email' %}
+                                    <input type="email" name="custom_{{ field.pk }}" id="custom_{{ field.pk }}" 
+                                           class="form-control" value="{{ custom_values|get_item:field.pk }}"
+                                           {% if field.is_required %}required{% endif %}>
+                                {% else %}
+                                    <input type="text" name="custom_{{ field.pk }}" id="custom_{{ field.pk }}" 
+                                           class="form-control" value="{{ custom_values|get_item:field.pk }}"
+                                           {% if field.is_required %}required{% endif %}>
+                                {% endif %}
+                                
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if forloop.counter|divisibleby:2 %}
+                            </div><div class="row">
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <hr class="my-4">
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="{% if customer %}{% url 'customers:customer_detail' customer.id %}{% else %}{% url 'customers:customer_list' %}{% endif %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check2"></i> 
+                                {% if customer %}Update Customer{% else %}Create Customer{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar with help -->
+    <div class="col-lg-4">
+        <div class="customer-card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Help & Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">Contact Information</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li>• Ensure email addresses are unique for each customer</li>
+                        <li>• Mobile numbers should include country code or start with 0</li>
+                        <li>• All fields marked with * are required</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">Address Guidelines</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li>• Use official New Zealand address format</li>
+                        <li>• Postcode must be exactly 4 digits</li>
+                        <li>• Include unit/apartment numbers in street address</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">After Saving</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li>• Add custom fields for additional information</li>
+                        <li>• Upload relevant documents and files</li>
+                        <li>• Customer will appear in the main customer list</li>
+                    </ul>
+                </div>
+
+                {% if customer %}
+                <div class="alert alert-info">
+                    <small>
+                        <strong>Customer ID:</strong> #{{ customer.id }}<br>
+                        <strong>Created:</strong> {{ customer.created_at|date:"M d, Y" }}<br>
+                        <strong>Last Updated:</strong> {{ customer.updated_at|date:"M d, Y" }}
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-format mobile number
+    const mobileInput = document.querySelector('#{{ form.mobile.id_for_label }}');
+    if (mobileInput) {
+        mobileInput.addEventListener('blur', function() {
+            let value = this.value.replace(/\s+/g, '');
+            if (value.match(/^0\d{8,9}$/)) {
+                // Format as 0X XXX XXXX
+                this.value = value.replace(/^(0\d{1,2})(\d{3})(\d{4})/, '$1 $2 $3');
+            } else if (value.match(/^\+?64\d{8,9}$/)) {
+                // Format as +64 X XXX XXXX
+                this.value = value.replace(/^\+?64(\d{1,2})(\d{3})(\d{4})/, '+64 $1 $2 $3');
+            }
+        });
+    }
+
+    // Auto-capitalize city names
+    const cityInput = document.querySelector('#{{ form.city.id_for_label }}');
+    if (cityInput) {
+        cityInput.addEventListener('blur', function() {
+            this.value = this.value.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+        });
+    }
+
+    // Postcode validation
+    const postcodeInput = document.querySelector('#{{ form.postcode.id_for_label }}');
+    if (postcodeInput) {
+        postcodeInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').substring(0, 4);
+        });
+    }
+});
+</script>
+{% endblock %}

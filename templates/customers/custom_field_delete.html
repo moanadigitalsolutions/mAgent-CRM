@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Custom Field - mAgent CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'customers:custom_field_list' %}">Custom Fields</a></li>
+                <li class="breadcrumb-item active">Delete {{ custom_field.label }}</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0 text-danger">Delete Custom Field</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+            </h5>
+            <p>Are you sure you want to delete the custom field <strong>{{ custom_field.label }}</strong>?</p>
+            <p class="mb-0"><strong>Warning:</strong> This will permanently delete all data stored in this field for all customers!</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Field Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Label:</strong></div>
+                    <div class="col-sm-8">{{ custom_field.label }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Name:</strong></div>
+                    <div class="col-sm-8"><code>{{ custom_field.name }}</code></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Type:</strong></div>
+                    <div class="col-sm-8">{{ custom_field.get_field_type_display }}</div>
+                </div>
+                {% if custom_field.options %}
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Options:</strong></div>
+                    <div class="col-sm-8">{{ custom_field.options }}</div>
+                </div>
+                {% endif %}
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Required:</strong></div>
+                    <div class="col-sm-8">
+                        {% if custom_field.is_required %}
+                            <span class="badge bg-warning">Yes</span>
+                        {% else %}
+                            <span class="badge bg-secondary">No</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Status:</strong></div>
+                    <div class="col-sm-8">
+                        {% if custom_field.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Created:</strong></div>
+                    <div class="col-sm-8">{{ custom_field.created_at|date:"M d, Y" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'customers:custom_field_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Delete Field
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="alert alert-warning">
+            <h6 class="alert-heading">
+                <i class="bi bi-info-circle"></i> Alternative: Deactivate Instead
+            </h6>
+            <p>Consider deactivating this field instead of deleting it:</p>
+            <ul>
+                <li>Preserves existing customer data</li>
+                <li>Can be reactivated later if needed</li>
+                <li>Maintains data integrity</li>
+            </ul>
+            <a href="{% url 'customers:custom_field_edit' custom_field.id %}" class="btn btn-warning btn-sm">
+                <i class="bi bi-pencil"></i> Edit Field Instead
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

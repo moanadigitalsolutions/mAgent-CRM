@@ -1,0 +1,19 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#f0f8ff"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="200" height="40" fill="#0066cc"/>
+  <text x="100" y="25" font-family="Arial" font-size="16" fill="white" text-anchor="middle">mAgent CRM</text>
+  
+  <!-- Logo Circle -->
+  <circle cx="100" cy="100" r="30" fill="#0066cc" stroke="#003d7a" stroke-width="2"/>
+  <text x="100" y="105" font-family="Arial" font-size="20" fill="white" text-anchor="middle">M</text>
+  
+  <!-- Test Image Label -->
+  <text x="100" y="140" font-family="Arial" font-size="12" fill="#333" text-anchor="middle">Test Image</text>
+  <text x="100" y="155" font-family="Arial" font-size="10" fill="#666" text-anchor="middle">File Preview Demo</text>
+  
+  <!-- Date -->
+  <text x="100" y="180" font-family="Arial" font-size="10" fill="#999" text-anchor="middle">August 23, 2025</text>
+</svg>

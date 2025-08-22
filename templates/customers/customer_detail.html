@@ -1,0 +1,736 @@
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ customer.full_name }} - Customer Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">Customers</a></li>
+                <li class="breadcrumb-item active">{{ customer.full_name }}</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0">{{ customer.full_name }}</h1>
+        <p class="text-muted mb-0">Customer Details</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:customer_edit' customer.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a href="{% url 'customers:customer_delete' customer.id %}" class="btn btn-outline-danger ms-2"
+           onclick="return confirmDelete('Are you sure you want to delete {{ customer.full_name }}?')">
+            <i class="bi bi-trash"></i> Delete
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Customer Information -->
+    <div class="col-lg-8">
+        <div class="customer-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-circle"></i> Contact Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">First Name</label>
+                            <p class="fw-medium">{{ customer.first_name }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Last Name</label>
+                            <p class="fw-medium">{{ customer.last_name }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Email</label>
+                            <p class="fw-medium">
+                                <a href="mailto:{{ customer.email }}" class="text-decoration-none">
+                                    {{ customer.email }}
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Mobile</label>
+                            <p class="fw-medium">
+                                <a href="tel:{{ customer.mobile }}" class="text-decoration-none">
+                                    {{ customer.mobile }}
+                                </a>
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Status</label>
+                            <p>
+                                {% if customer.is_active %}
+                                    <span class="status-badge status-active">Active</span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">Inactive</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address Information -->
+        <div class="customer-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-geo-alt"></i> Address
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Street Address</label>
+                            <p class="fw-medium">{{ customer.street_address }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Suburb</label>
+                            <p class="fw-medium">{{ customer.suburb }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">City</label>
+                            <p class="fw-medium">{{ customer.city }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Postcode</label>
+                            <p class="fw-medium">{{ customer.postcode }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <p class="text-muted mb-1">Full Address:</p>
+                    <p class="fw-medium">{{ customer.full_address }}</p>
+                    <a href="https://www.google.com/maps/search/{{ customer.full_address|urlencode }}" 
+                       target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-map"></i> View on Map
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Fields -->
+        {% if custom_fields %}
+        <div class="customer-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul"></i> Custom Fields
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="custom-fields-grid">
+                    {% for field in custom_fields %}
+                    <div class="custom-field-row">
+                        <div class="custom-field-label">
+                            <span class="field-name">{{ field.label }}</span>
+                        </div>
+                        <div class="custom-field-value">
+                            {% if custom_values %}
+                                {% for field_id, field_value in custom_values.items %}
+                                    {% if field_id == field.id %}
+                                        {% if field_value %}
+                                            <span class="field-data">{{ field_value }}</span>
+                                        {% else %}
+                                            <span class="field-empty">Not set</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="field-empty">Not set</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Stats -->
+        <div class="customer-card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Stats</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Customer Since</span>
+                    <span class="fw-medium">{{ customer.created_at|date:"M d, Y" }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Last Updated</span>
+                    <span class="fw-medium">{{ customer.updated_at|date:"M d, Y" }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Files</span>
+                    <span class="fw-medium">{{ files.count }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="customer-card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-paperclip"></i> Files & Documents
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Upload Area -->
+                <div class="file-upload-area mb-3" data-customer-id="{{ customer.id }}">
+                    <i class="bi bi-cloud-upload fs-1 text-muted mb-2"></i>
+                    <p class="mb-2">Drag & drop files here</p>
+                    <p class="text-muted small mb-3">or click to browse</p>
+                    <input type="file" class="d-none" multiple accept="*/*" data-customer-id="{{ customer.id }}">
+                    <button class="btn btn-outline-primary btn-sm">Choose Files</button>
+                </div>
+
+                <!-- File List -->
+                {% if files %}
+                <div class="file-list">
+                    <h6 class="mb-3">Uploaded Files ({{ files.count }})</h6>
+                    {% for file in files %}
+                    <div class="file-item d-flex align-items-center justify-content-between p-2 border rounded mb-2" 
+                         data-file-id="{{ file.id }}" 
+                         data-file-url="{{ file.file.url }}" 
+                         data-file-name="{{ file.file.name|cut:'customer_files/' }}"
+                         data-file-type="{{ file.file_type }}"
+                         data-file-size="{{ file.file_size }}"
+                         data-upload-date="{{ file.uploaded_at|date:'M d, Y' }}"
+                         data-description="{{ file.description|default:'' }}">
+                        <div class="d-flex align-items-center file-clickable" style="cursor: pointer; flex: 1;">
+                            <i class="bi bi-{% if file.file_type == 'image' %}image{% elif file.file_type == 'document' %}file-text{% elif file.file_type == 'video' %}play-circle{% elif file.file_type == 'audio' %}music-note{% else %}file{% endif %} me-2 file-icon"></i>
+                            <div>
+                                <div class="fw-medium small file-name">{{ file.file.name|cut:"customer_files/" }}</div>
+                                <div class="text-muted small">{{ file.file_size }} • {{ file.uploaded_at|date:"M d, Y" }}</div>
+                                {% if file.description %}
+                                <div class="text-muted small file-desc">{{ file.description }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-link btn-sm" data-bs-toggle="dropdown" title="File options">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <button class="dropdown-item file-preview-btn" type="button">
+                                        <i class="bi bi-eye"></i> Preview
+                                    </button>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ file.file.url }}" target="_blank">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="{% url 'customers:customer_delete_file' customer.id file.id %}" 
+                                          class="file-delete-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger"
+                                                onclick="return confirmDelete('Are you sure you want to delete this file?')">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No files uploaded yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Preview Modal -->
+<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filePreviewModalLabel">
+                    <i class="bi bi-file me-2" id="modalFileIcon"></i>
+                    <span id="modalFileName">File Preview</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="file-preview-container">
+                    <!-- File details -->
+                    <div class="file-details mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">File Size:</small>
+                                <div id="modalFileSize" class="fw-medium">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Upload Date:</small>
+                                <div id="modalUploadDate" class="fw-medium">-</div>
+                            </div>
+                        </div>
+                        <div id="modalFileDescription" class="mt-2" style="display: none;">
+                            <small class="text-muted">Description:</small>
+                            <div class="fw-medium"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- File preview area -->
+                    <div class="file-preview-area">
+                        <div id="imagePreview" class="text-center" style="display: none;">
+                            <img id="previewImage" src="" alt="Preview" class="img-fluid rounded" style="max-height: 400px;">
+                        </div>
+                        
+                        <div id="pdfPreview" class="text-center" style="display: none;">
+                            <iframe id="previewPdf" src="" class="rounded border" style="width: 100%; height: 500px;">
+                                Your browser does not support PDF preview.
+                            </iframe>
+                        </div>
+                        
+                        <div id="textPreview" class="text-center" style="display: none;">
+                            <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                                <pre id="textContent" class="text-start mb-0" style="white-space: pre-wrap; font-size: 0.9rem;"></pre>
+                            </div>
+                        </div>
+                        
+                        <div id="videoPreview" class="text-center" style="display: none;">
+                            <video id="previewVideo" controls class="rounded" style="max-width: 100%; max-height: 400px;">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                        
+                        <div id="audioPreview" class="text-center" style="display: none;">
+                            <audio id="previewAudio" controls class="w-100">
+                                Your browser does not support the audio tag.
+                            </audio>
+                        </div>
+                        
+                        <div id="officePreview" class="text-center" style="display: none;">
+                            <div class="office-preview-container">
+                                <div class="alert alert-info mb-3">
+                                    <i class="bi bi-info-circle"></i> Office Document Preview
+                                </div>
+                                <iframe id="previewOffice" src="" class="rounded border" style="width: 100%; height: 500px;">
+                                    Your browser does not support document preview.
+                                </iframe>
+                                <p class="text-muted mt-2 small">
+                                    If the preview doesn't load, please download the file to view it.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div id="defaultPreview" class="text-center py-5" style="display: none;">
+                            <i class="bi bi-file-earmark display-1 text-muted mb-3"></i>
+                            <p class="text-muted">Preview not available for this file type</p>
+                            <p class="small text-muted">Click download to view the file</p>
+                        </div>
+                        
+                        <div id="loadingPreview" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2">Loading preview...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="modalDownloadBtn" href="#" class="btn btn-primary" target="_blank">
+                    <i class="bi bi-download"></i> Download
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Customer detail specific JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize file upload for this customer
+    const uploadArea = document.querySelector('.file-upload-area');
+    if (uploadArea) {
+        const button = uploadArea.querySelector('button');
+        const input = uploadArea.querySelector('input[type="file"]');
+        const customerId = uploadArea.dataset.customerId;
+        
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            input.click();
+        });
+        
+        // Handle file selection
+        input.addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadFiles(files, customerId);
+            }
+        });
+        
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFiles(files, customerId);
+            }
+        });
+        
+        // Make upload area clickable
+        uploadArea.addEventListener('click', function(e) {
+            if (e.target === uploadArea || e.target.closest('.file-upload-area') === uploadArea) {
+                if (e.target !== button && !e.target.closest('button')) {
+                    input.click();
+                }
+            }
+        });
+    }
+    
+    // Initialize file preview functionality
+    initializeFilePreview();
+});
+
+function uploadFiles(files, customerId) {
+    const formData = new FormData();
+    
+    // Add all files to FormData
+    for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+    }
+    
+    // Show upload progress
+    showUploadProgress(files.length);
+    
+    // Upload files via AJAX
+    fetch(`/customers/${customerId}/upload-files/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideUploadProgress();
+        
+        if (data.success) {
+            showUploadSuccess(data.message);
+            // Reload the page to show the new files
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showUploadError('Upload failed. Please try again.');
+        }
+    })
+    .catch(error => {
+        hideUploadProgress();
+        console.error('Upload error:', error);
+        showUploadError('Upload failed. Please try again.');
+    });
+}
+
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    return '';
+}
+
+function showUploadProgress(fileCount) {
+    const uploadArea = document.querySelector('.file-upload-area');
+    const progressHtml = `
+        <div class="upload-progress">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="ms-2">Uploading ${fileCount} file(s)...</span>
+        </div>
+    `;
+    uploadArea.innerHTML = progressHtml;
+}
+
+function hideUploadProgress() {
+    const uploadArea = document.querySelector('.file-upload-area');
+    const customerId = uploadArea.dataset.customerId;
+    
+    // Restore original upload area
+    uploadArea.innerHTML = `
+        <i class="bi bi-cloud-upload fs-1 text-muted mb-2"></i>
+        <p class="mb-2">Drag & drop files here</p>
+        <p class="text-muted small mb-3">or click to browse</p>
+        <input type="file" class="d-none" multiple accept="*/*" data-customer-id="${customerId}">
+        <button class="btn btn-outline-primary btn-sm">Choose Files</button>
+    `;
+    
+    // Re-initialize the upload functionality
+    const button = uploadArea.querySelector('button');
+    const input = uploadArea.querySelector('input[type="file"]');
+    
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        input.click();
+    });
+    
+    input.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (files.length > 0) {
+            uploadFiles(files, customerId);
+        }
+    });
+}
+
+function showUploadSuccess(message) {
+    showNotification(message, 'success');
+}
+
+function showUploadError(message) {
+    showNotification(message, 'error');
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+function initializeFilePreview() {
+    // Add click handlers to file items
+    const fileItems = document.querySelectorAll('.file-clickable');
+    fileItems.forEach(fileItem => {
+        fileItem.addEventListener('click', function(e) {
+            e.preventDefault();
+            const fileData = this.closest('.file-item');
+            showFilePreview(fileData);
+        });
+    });
+    
+    // Add click handlers to preview buttons
+    const previewButtons = document.querySelectorAll('.file-preview-btn');
+    previewButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const fileData = this.closest('.file-item');
+            showFilePreview(fileData);
+        });
+    });
+}
+
+function showFilePreview(fileItem) {
+    const modal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
+    const fileUrl = fileItem.dataset.fileUrl;
+    const fileName = fileItem.dataset.fileName;
+    const fileType = fileItem.dataset.fileType;
+    const fileSize = fileItem.dataset.fileSize;
+    const uploadDate = fileItem.dataset.uploadDate;
+    const description = fileItem.dataset.description;
+    
+    // Update modal title and details
+    document.getElementById('modalFileName').textContent = fileName;
+    document.getElementById('modalFileSize').textContent = fileSize;
+    document.getElementById('modalUploadDate').textContent = uploadDate;
+    document.getElementById('modalDownloadBtn').href = fileUrl;
+    
+    // Update file icon
+    const iconElement = document.getElementById('modalFileIcon');
+    let iconClass = 'bi-file';
+    if (fileType === 'image') iconClass = 'bi-image';
+    else if (fileType === 'document') iconClass = 'bi-file-text';
+    else if (fileType === 'video') iconClass = 'bi-play-circle';
+    else if (fileType === 'audio') iconClass = 'bi-music-note';
+    
+    iconElement.className = `bi ${iconClass} me-2`;
+    
+    // Handle description
+    const descElement = document.getElementById('modalFileDescription');
+    if (description && description.trim()) {
+        descElement.querySelector('div').textContent = description;
+        descElement.style.display = 'block';
+    } else {
+        descElement.style.display = 'none';
+    }
+    
+    // Hide all preview areas
+    hideAllPreviewAreas();
+    
+    // Show loading
+    document.getElementById('loadingPreview').style.display = 'block';
+    
+    // Show appropriate preview based on file type
+    setTimeout(() => {
+        document.getElementById('loadingPreview').style.display = 'none';
+        showPreviewByType(fileType, fileUrl, fileName);
+    }, 500);
+    
+    modal.show();
+}
+
+function hideAllPreviewAreas() {
+    const previewAreas = ['imagePreview', 'pdfPreview', 'textPreview', 'videoPreview', 'audioPreview', 'officePreview', 'defaultPreview'];
+    previewAreas.forEach(area => {
+        document.getElementById(area).style.display = 'none';
+    });
+}
+
+function showPreviewByType(fileType, fileUrl, fileName) {
+    const extension = fileName.toLowerCase().split('.').pop();
+    
+    switch (fileType) {
+        case 'image':
+            showImagePreview(fileUrl);
+            break;
+        case 'video':
+            showVideoPreview(fileUrl);
+            break;
+        case 'audio':
+            showAudioPreview(fileUrl);
+            break;
+        case 'document':
+            if (extension === 'pdf') {
+                showPdfPreview(fileUrl);
+            } else if (['txt', 'md', 'log', 'csv', 'json', 'xml', 'js', 'css', 'html', 'py', 'java', 'cpp', 'c', 'h'].includes(extension)) {
+                showTextPreview(fileUrl);
+            } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension)) {
+                showOfficePreview(fileUrl, extension);
+            } else {
+                showDefaultPreview();
+            }
+            break;
+        default:
+            // Handle by extension for files that might not have proper MIME types
+            if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) {
+                showImagePreview(fileUrl);
+            } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'].includes(extension)) {
+                showVideoPreview(fileUrl);
+            } else if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(extension)) {
+                showAudioPreview(fileUrl);
+            } else if (extension === 'pdf') {
+                showPdfPreview(fileUrl);
+            } else if (['txt', 'md', 'log', 'csv', 'json', 'xml', 'js', 'css', 'html', 'py', 'java', 'cpp', 'c', 'h'].includes(extension)) {
+                showTextPreview(fileUrl);
+            } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension)) {
+                showOfficePreview(fileUrl, extension);
+            } else {
+                showDefaultPreview();
+            }
+    }
+}
+
+function showImagePreview(fileUrl) {
+    const imagePreview = document.getElementById('imagePreview');
+    const image = document.getElementById('previewImage');
+    image.src = fileUrl;
+    imagePreview.style.display = 'block';
+}
+
+function showPdfPreview(fileUrl) {
+    const pdfPreview = document.getElementById('pdfPreview');
+    const iframe = document.getElementById('previewPdf');
+    // Add #view=FitH to make PDF fit horizontally
+    iframe.src = fileUrl + '#view=FitH';
+    pdfPreview.style.display = 'block';
+}
+
+function showVideoPreview(fileUrl) {
+    const videoPreview = document.getElementById('videoPreview');
+    const video = document.getElementById('previewVideo');
+    video.src = fileUrl;
+    videoPreview.style.display = 'block';
+}
+
+function showAudioPreview(fileUrl) {
+    const audioPreview = document.getElementById('audioPreview');
+    const audio = document.getElementById('previewAudio');
+    audio.src = fileUrl;
+    audioPreview.style.display = 'block';
+}
+
+function showOfficePreview(fileUrl, extension) {
+    const officePreview = document.getElementById('officePreview');
+    const iframe = document.getElementById('previewOffice');
+    
+    // Try to use Microsoft Office Online viewer for Office documents
+    let viewerUrl = fileUrl;
+    if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension)) {
+        // For local files, we'll try to display them directly
+        // In production, you might want to use Google Docs Viewer or Office Online
+        viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(window.location.origin + fileUrl)}&embedded=true`;
+    }
+    
+    iframe.src = viewerUrl;
+    officePreview.style.display = 'block';
+    
+    // Fallback if iframe fails to load
+    iframe.onerror = function() {
+        showDefaultPreview();
+    };
+}
+
+function showTextPreview(fileUrl) {
+    fetch(fileUrl)
+        .then(response => response.text())
+        .then(text => {
+            const textPreview = document.getElementById('textPreview');
+            const textContent = document.getElementById('textContent');
+            textContent.textContent = text;
+            textPreview.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error loading text file:', error);
+            showDefaultPreview();
+        });
+}
+
+function showDefaultPreview() {
+    document.getElementById('defaultPreview').style.display = 'block';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}mAgent - Moana Agent CRM{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    {% csrf_token %}
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{% url 'customers:customer_list' %}">
+                <i class="bi bi-waves"></i> mAgent
+                <small class="text-light opacity-75">Moana Agent</small>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'customer_list' %}active{% endif %}" 
+                           href="{% url 'customers:customer_list' %}">
+                            <i class="bi bi-people"></i> Customers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'customers:customer_create' %}">
+                            <i class="bi bi-person-plus"></i> Add Customer
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'customers:custom_field_list' %}">
+                            <i class="bi bi-gear"></i> Custom Fields
+                        </a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> Admin
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/admin/"><i class="bi bi-shield-lock"></i> Django Admin</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 pt-3">
+        <div class="row">
+            <!-- Left Sidebar -->
+            <nav class="col-md-2 d-md-block bg-light sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'customer_list' %}active{% endif %}" 
+                               href="{% url 'customers:customer_list' %}">
+                                <i class="bi bi-people"></i> All Customers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:customer_create' %}">
+                                <i class="bi bi-person-plus"></i> Add New Customer
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:custom_field_list' %}">
+                                <i class="bi bi-list-ul"></i> Custom Fields
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Quick Actions</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:customer_list' %}?search=">
+                                <i class="bi bi-search"></i> Search Customers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:customer_list' %}?city=Auckland">
+                                <i class="bi bi-geo-alt"></i> Auckland Customers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:customer_list' %}?city=Wellington">
+                                <i class="bi bi-geo-alt"></i> Wellington Customers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:customer_list' %}?city=Christchurch">
+                                <i class="bi bi-geo-alt"></i> Christchurch Customers
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,10 @@
+This is a test file for uploading to the CRM system.
+
+The file upload functionality has been fixed with the following improvements:
+1. Proper JavaScript event handlers for file selection
+2. AJAX upload to the Django backend
+3. Progress indicators during upload
+4. Success/error notifications
+5. Page refresh to show newly uploaded files
+
+This test file will help verify that the upload process works correctly.

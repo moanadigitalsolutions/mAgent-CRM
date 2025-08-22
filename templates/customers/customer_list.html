@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Customers - mAgent CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-people text-primary"></i> Customers
+        </h1>
+        <p class="text-muted mb-0">Manage your customer database</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:customer_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add Customer
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="search-filters">
+    <form method="GET" class="row g-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search-input" name="search" 
+                   value="{{ search_query }}" placeholder="Search customers...">
+        </div>
+        <div class="col-md-2">
+            <label for="city" class="form-label">City</label>
+            <input type="text" class="form-control" name="city" 
+                   value="{{ city_filter }}" placeholder="Filter by city">
+        </div>
+        <div class="col-md-2">
+            <label for="order_by" class="form-label">Sort By</label>
+            <select name="order_by" class="form-select">
+                <option value="last_name" {% if order_by == 'last_name' %}selected{% endif %}>Last Name A-Z</option>
+                <option value="-last_name" {% if order_by == '-last_name' %}selected{% endif %}>Last Name Z-A</option>
+                <option value="first_name" {% if order_by == 'first_name' %}selected{% endif %}>First Name A-Z</option>
+                <option value="city" {% if order_by == 'city' %}selected{% endif %}>City A-Z</option>
+                <option value="-created_at" {% if order_by == '-created_at' %}selected{% endif %}>Newest First</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>&nbsp;</label>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label>&nbsp;</label>
+            <div class="d-grid">
+                <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Quick Filter Chips -->
+    <div class="mt-3">
+        <small class="text-muted">Quick Filters:</small>
+        <span class="filter-chip" data-filter="city:Auckland">Auckland</span>
+        <span class="filter-chip" data-filter="city:Wellington">Wellington</span>
+        <span class="filter-chip" data-filter="city:Christchurch">Christchurch</span>
+        <span class="filter-chip" data-filter="active:true">Active Only</span>
+    </div>
+</div>
+
+<!-- Customer Table (Monday.com style) -->
+<div class="customer-table">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th width="5%">
+                        <input type="checkbox" class="form-check-input" id="select-all">
+                    </th>
+                    <th width="7%">ID</th>
+                    <th width="18%">First Name</th>
+                    <th width="18%">Last Name</th>
+                    <th width="25%">Email</th>
+                    <th width="15%">Mobile</th>
+                    <th width="12%">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr data-customer-id="{{ customer.id }}">
+                    <td>
+                        <input type="checkbox" class="form-check-input customer-checkbox" 
+                               value="{{ customer.id }}">
+                    </td>
+                    <td>
+                        <div class="text-muted small">
+                            #{{ customer.id }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="editable-cell" data-field="first_name" 
+                             data-customer-id="{{ customer.id }}" data-field-type="text">
+                            {{ customer.first_name }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="editable-cell" data-field="last_name" 
+                             data-customer-id="{{ customer.id }}" data-field-type="text">
+                            {{ customer.last_name }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="editable-cell" data-field="email" 
+                             data-customer-id="{{ customer.id }}" data-field-type="email">
+                            {{ customer.email }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="editable-cell" data-field="mobile" 
+                             data-customer-id="{{ customer.id }}" data-field-type="tel">
+                            {{ customer.mobile }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{% url 'customers:customer_detail' customer.id %}" 
+                               class="btn btn-action btn-outline-primary btn-sm" 
+                               data-bs-toggle="tooltip" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'customers:customer_edit' customer.id %}" 
+                               class="btn btn-action btn-outline-secondary btn-sm"
+                               data-bs-toggle="tooltip" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'customers:customer_delete' customer.id %}" 
+                               class="btn btn-action btn-outline-danger btn-sm"
+                               data-bs-toggle="tooltip" title="Delete"
+                               onclick="return confirmDelete('Are you sure you want to delete {{ customer.full_name }}?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-people fs-1 mb-3 d-block"></i>
+                        <h5>No customers found</h5>
+                        <p>{% if search_query %}No customers match your search criteria.{% else %}Get started by adding your first customer.{% endif %}</p>
+                        <a href="{% url 'customers:customer_create' %}" class="btn btn-primary">
+                            <i class="bi bi-person-plus"></i> Add First Customer
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+{% if customers %}
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+        <select class="form-select d-inline-block" style="width: auto;" id="bulk-action">
+            <option value="">Bulk Actions</option>
+            <option value="activate">Activate Selected</option>
+            <option value="deactivate">Deactivate Selected</option>
+            <option value="delete">Delete Selected</option>
+            <option value="export">Export Selected</option>
+        </select>
+        <button type="button" class="btn btn-outline-primary ms-2" id="apply-bulk-action">
+            Apply
+        </button>
+        <span class="text-muted ms-3" id="selected-count">0 selected</span>
+    </div>
+    
+    <!-- Pagination -->
+    {% if customers.has_other_pages %}
+    <nav aria-label="Customer pagination">
+        <ul class="pagination mb-0">
+            {% if customers.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
+                        &laquo; First
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
+                        Previous
+                    </a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Page {{ customers.number }} of {{ customers.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if customers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
+                        Next
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
+                        Last &raquo;
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize bulk selection functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const customerCheckboxes = document.querySelectorAll('.customer-checkbox');
+    const selectedCount = document.getElementById('selected-count');
+    const bulkActionSelect = document.getElementById('bulk-action');
+    const applyBulkActionBtn = document.getElementById('apply-bulk-action');
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            customerCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+    }
+
+    // Individual checkbox change
+    customerCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Update selected count
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.customer-checkbox:checked');
+        if (selectedCount) {
+            selectedCount.textContent = `${selected.length} selected`;
+        }
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = selected.length === customerCheckboxes.length;
+            selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < customerCheckboxes.length;
+        }
+    }
+
+    // Apply bulk action
+    if (applyBulkActionBtn) {
+        applyBulkActionBtn.addEventListener('click', function() {
+            const action = bulkActionSelect.value;
+            const selected = Array.from(document.querySelectorAll('.customer-checkbox:checked'))
+                                  .map(cb => cb.value);
+
+            if (!action) {
+                alert('Please select an action');
+                return;
+            }
+
+            if (selected.length === 0) {
+                alert('Please select at least one customer');
+                return;
+            }
+
+            if (action === 'delete' && !confirm(`Are you sure you want to delete ${selected.length} customer(s)?`)) {
+                return;
+            }
+
+            // Implement bulk action logic here
+            console.log('Bulk action:', action, 'Selected:', selected);
+            showNotification(`${action} action applied to ${selected.length} customer(s)`, 'success');
+        });
+    }
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

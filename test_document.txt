@@ -1,0 +1,16 @@
+Test Document for File Upload
+
+This is a test document to verify the file upload functionality in mAgent CRM.
+
+Date: August 23, 2025
+Purpose: Testing the drag & drop file upload feature
+Customer: Jonathan Smith
+
+The file upload system should:
+1. Accept various file types
+2. Store files securely
+3. Display uploaded files in the customer detail view
+4. Allow file download and deletion
+5. Show file metadata (size, type, upload date)
+
+This document should appear in the Files & Documents section after upload.
