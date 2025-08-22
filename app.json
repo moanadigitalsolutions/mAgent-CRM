@@ -1,0 +1,38 @@
+{
+  "name": "mAgent CRM",
+  "description": "A modern Customer Relationship Management system built with Django",
+  "keywords": ["django", "crm", "customer-management", "python"],
+  "website": "https://github.com/moanadigitalsolutions/mAgent-CRM",
+  "repository": "https://github.com/moanadigitalsolutions/mAgent-CRM",
+  "stack": "heroku-22",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "env": {
+    "SECRET_KEY": {
+      "description": "A secret key for Django to use for encryption",
+      "generator": "secret"
+    },
+    "DEBUG": {
+      "description": "Enable Django debug mode",
+      "value": "False"
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:essential-0",
+      "as": "DATABASE"
+    }
+  ],
+  "scripts": {
+    "postdeploy": "python manage.py migrate && python manage.py shell -c \"from customers.models import Customer; from django.core.management import call_command; call_command('create_sample_data') if not Customer.objects.exists() else print('Data exists')\""
+  }
+}

@@ -78,3 +78,11 @@ MANIFEST
 *.pem
 *.key
 *.crt
+
+# Heroku specific
+.heroku/
+
+# Test files created during development
+test_*.txt
+test_*.pdf
+test_*.svg
