@@ -116,6 +116,31 @@ class CustomerFile(models.Model):
     def __str__(self):
         return f"{self.customer} - {self.file.name}"
     
+    def save(self, *args, **kwargs):
+        """Auto-detect file_type if still set to 'other'.
+
+        Detection priority:
+        1. Extension mapping
+        2. (Optional future) MIME sniff if needed
+        """
+        if self.file and (not self.file_type or self.file_type == 'other'):
+            name = self.file.name.lower()
+            # Extension-based detection
+            ext_map = {
+                'image': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'],
+                'video': ['.mp4', '.mov', '.avi', '.wmv', '.flv', '.mkv', '.webm'],
+                'audio': ['.mp3', '.wav', '.ogg', '.aac', '.flac', '.m4a'],
+                'document': ['.pdf', '.txt', '.md', '.log', '.csv', '.json', '.xml', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.html', '.css', '.js', '.py', '.java', '.cpp', '.c', '.h']
+            }
+            detected = None
+            for ftype, exts in ext_map.items():
+                if any(name.endswith(ext) for ext in exts):
+                    detected = ftype
+                    break
+            if detected:
+                self.file_type = detected
+        super().save(*args, **kwargs)
+    
     @property
     def file_size(self):
         """Get file size in human-readable format"""

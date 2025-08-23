@@ -471,7 +471,9 @@ function uploadFiles(files, customerId, doneCb) {
         hideUploadProgress();
         if (data.success) {
             showUploadSuccess(data.message);
-            setTimeout(() => location.reload(), 1200);
+            if (Array.isArray(data.files)) {
+                appendUploadedFiles(data.files);
+            }
         } else {
             showUploadError(data.error || 'Upload failed.');
         }
@@ -575,6 +577,112 @@ function initializeFilePreview() {
             showFilePreview(fileData);
         });
     });
+}
+
+function appendUploadedFiles(filesMeta) {
+    let listContainer = document.querySelector('.file-list');
+    if (!listContainer) {
+        // Create container if first file(s) uploaded
+        const cardBody = document.querySelector('.customer-card .card-body');
+        listContainer = document.createElement('div');
+        listContainer.className = 'file-list';
+        listContainer.innerHTML = `<h6 class="mb-3">Uploaded Files (<span class="file-count">0</span>)</h6>`;
+        const uploadCard = document.querySelector('.file-upload-area');
+        if (uploadCard && uploadCard.parentElement) {
+            uploadCard.parentElement.appendChild(listContainer);
+        }
+    }
+    let countSpan = listContainer.querySelector('.file-count');
+    if (!countSpan) {
+        const h6 = listContainer.querySelector('h6');
+        if (h6) {
+            h6.innerHTML = `Uploaded Files (<span class="file-count">0</span>)`;
+            countSpan = h6.querySelector('.file-count');
+        }
+    }
+    const currentCount = parseInt(countSpan.textContent || '0', 10);
+    const fragment = document.createDocumentFragment();
+    filesMeta.forEach(meta => {
+        const div = document.createElement('div');
+        div.className = 'file-item d-flex align-items-center justify-content-between p-2 border rounded mb-2';
+        div.setAttribute('data-file-id', meta.id);
+        div.setAttribute('data-file-url', meta.url);
+        div.setAttribute('data-file-name', meta.name);
+        div.setAttribute('data-file-type', meta.type);
+        div.setAttribute('data-file-size', meta.size);
+        div.setAttribute('data-upload-date', meta.uploaded_at);
+        div.setAttribute('data-description', meta.description || '');
+        const icon = fileTypeToIcon(meta.type, meta.name);
+        div.innerHTML = `
+            <div class="d-flex align-items-center file-clickable file-click-target flex-grow-1">
+                <i class="bi bi-${icon} me-2 file-icon"></i>
+                <div>
+                    <div class="fw-medium small file-name">${meta.name}</div>
+                    <div class="text-muted small">${meta.size} • ${meta.uploaded_at}</div>
+                    ${meta.description ? `<div class=\"text-muted small file-desc\">${escapeHtml(meta.description)}</div>` : ''}
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-link btn-sm" data-bs-toggle="dropdown" title="File options">
+                    <i class="bi bi-three-dots"></i>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <button class="dropdown-item file-preview-btn" type="button">
+                            <i class="bi bi-eye"></i> Preview
+                        </button>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="${meta.url}" target="_blank">
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                    </li>
+                </ul>
+            </div>`;
+        fragment.appendChild(div);
+    });
+    listContainer.appendChild(fragment);
+    if (countSpan) countSpan.textContent = (currentCount + filesMeta.length).toString();
+    // Rebind preview handlers for new elements
+    initializeFilePreview();
+}
+
+function fileTypeToIcon(type, name) {
+    if (type === 'image') return 'image';
+    if (type === 'video') return 'play-circle';
+    if (type === 'audio') return 'music-note';
+    if (type === 'document') {
+        const ext = name.toLowerCase().split('.').pop();
+        if (ext === 'pdf') return 'file-pdf';
+        return 'file-text';
+    }
+    return 'file';
+}
+
+function escapeHtml(str) {
+    return str.replace(/[&<>"];/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',';':'&#59;'}[c] || c));
+}
+
+// Enhance text preview: limit very large files
+const MAX_TEXT_PREVIEW_BYTES = 200 * 1024; // 200KB
+function showTextPreview(fileUrl) {
+    fetch(fileUrl)
+        .then(response => response.ok ? response.text() : Promise.reject('Fetch failed'))
+        .then(text => {
+            let truncated = false;
+            if (text.length > MAX_TEXT_PREVIEW_BYTES) {
+                text = text.slice(0, MAX_TEXT_PREVIEW_BYTES) + "\n\n[Truncated preview. Download to view full content.]";
+                truncated = true;
+            }
+            const textPreview = document.getElementById('textPreview');
+            const textContent = document.getElementById('textContent');
+            textContent.textContent = text;
+            textPreview.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error loading text file:', error);
+            showDefaultPreview();
+        });
 }
 
 function showFilePreview(fileItem) {

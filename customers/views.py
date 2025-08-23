@@ -256,42 +256,48 @@ def customer_upload_files(request, pk):
     
     if request.method == 'POST':
         files = request.FILES.getlist('files')
-        uploaded_count = 0
-        
+        uploaded = []
+        description = request.POST.get('description', '')
+
         for file in files:
-            # Determine file type based on content type and file extension
+            # Basic extension-based classification (model save will refine if needed)
             file_type = 'other'
-            file_extension = file.name.lower().split('.')[-1] if '.' in file.name else ''
-            
-            if file.content_type.startswith('image/') or file_extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']:
+            file_extension = file.name.lower().rsplit('.', 1)[-1] if '.' in file.name else ''
+            if file_extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']:
                 file_type = 'image'
-            elif file.content_type.startswith('video/') or file_extension in ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv']:
+            elif file_extension in ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv']:
                 file_type = 'video'
-            elif file.content_type.startswith('audio/') or file_extension in ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a']:
+            elif file_extension in ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a']:
                 file_type = 'audio'
-            elif (file.content_type in ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
-                                      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                      'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                                      'text/plain', 'text/csv', 'application/json', 'text/xml', 'application/xml'] or 
-                 file_extension in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md', 'csv', 'json', 'xml', 'log']):
+            elif file_extension in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md', 'csv', 'json', 'xml', 'log']:
                 file_type = 'document'
-            
+
             customer_file = CustomerFile.objects.create(
                 customer=customer,
                 file=file,
                 file_type=file_type,
-                description=request.POST.get('description', '')
+                description=description
             )
-            uploaded_count += 1
-        
+
+            uploaded.append({
+                'id': customer_file.id,
+                'url': customer_file.file.url,
+                'name': customer_file.file.name.split('/')[-1],
+                'type': customer_file.file_type,
+                'size': customer_file.file_size,
+                'uploaded_at': customer_file.uploaded_at.strftime('%b %d, %Y'),
+                'description': customer_file.description or ''
+            })
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
-                'uploaded_count': uploaded_count,
-                'message': f'{uploaded_count} file(s) uploaded successfully'
+                'uploaded_count': len(uploaded),
+                'files': uploaded,
+                'message': f"{len(uploaded)} file(s) uploaded successfully"
             })
         else:
-            messages.success(request, f'{uploaded_count} file(s) uploaded successfully!')
+            messages.success(request, f"{len(uploaded)} file(s) uploaded successfully!")
             return redirect('customers:customer_detail', pk=customer.pk)
     
     return redirect('customers:customer_detail', pk=customer.pk)
