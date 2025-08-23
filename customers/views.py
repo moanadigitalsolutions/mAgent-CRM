@@ -1,11 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.utils.decorators import method_decorator
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from django.views import View
 from django.core.files.storage import default_storage
 import json
@@ -14,9 +14,10 @@ from .models import Customer, CustomField, CustomerCustomFieldValue, CustomerFil
 from .forms import CustomerForm, CustomFieldForm, CustomerFileForm
 
 
+@method_decorator(login_required, name='dispatch')
 class CustomerListView(View):
-    """Monday.com style customer list with inline editing"""
-    
+    """Customer list with search & filters (login required)"""
+
     def get(self, request):
         customers = Customer.objects.filter(is_active=True)
         
@@ -74,6 +75,7 @@ class CustomerListView(View):
         return render(request, 'customers/customer_list.html', context)
 
 
+@login_required
 def customer_detail(request, pk):
     """Customer detail view with custom fields and files"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -104,6 +106,7 @@ def customer_detail(request, pk):
     return render(request, 'customers/customer_detail.html', context)
 
 
+@login_required
 def customer_create(request):
     """Create new customer"""
     custom_fields = CustomField.objects.filter(is_active=True)
@@ -111,7 +114,10 @@ def customer_create(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
         if form.is_valid():
-            customer = form.save()
+            customer = form.save(commit=False)
+            if request.user.is_authenticated:
+                customer.created_by = request.user
+            customer.save()
             
             # Handle custom fields
             for field in custom_fields:
@@ -142,6 +148,7 @@ def customer_create(request):
     })
 
 
+@login_required
 def customer_edit(request, pk):
     """Edit existing customer"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -194,6 +201,7 @@ def customer_edit(request, pk):
     })
 
 
+@login_required
 def customer_delete(request, pk):
     """Soft delete customer"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -209,6 +217,7 @@ def customer_delete(request, pk):
     })
 
 
+@login_required
 @require_POST
 def customer_update_field(request, pk):
     """AJAX endpoint for inline editing"""
@@ -250,6 +259,7 @@ def customer_update_field(request, pk):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
+@login_required
 def customer_upload_files(request, pk):
     """Upload files for customer"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -303,6 +313,7 @@ def customer_upload_files(request, pk):
     return redirect('customers:customer_detail', pk=customer.pk)
 
 
+@login_required
 def customer_delete_file(request, pk, file_id):
     """Delete customer file"""
     customer = get_object_or_404(Customer, pk=pk)
@@ -323,6 +334,7 @@ def customer_delete_file(request, pk, file_id):
 
 
 # Custom Fields Views
+@login_required
 def custom_field_list(request):
     """List all custom fields"""
     custom_fields = CustomField.objects.all().order_by('name')
@@ -334,6 +346,7 @@ def custom_field_list(request):
     return render(request, 'customers/custom_field_list.html', context)
 
 
+@login_required
 def custom_field_create(request):
     """Create new custom field"""
     if request.method == 'POST':
@@ -351,6 +364,7 @@ def custom_field_create(request):
     })
 
 
+@login_required
 def custom_field_edit(request, pk):
     """Edit custom field"""
     custom_field = get_object_or_404(CustomField, pk=pk)
@@ -371,6 +385,7 @@ def custom_field_edit(request, pk):
     })
 
 
+@login_required
 def custom_field_delete(request, pk):
     """Delete custom field"""
     custom_field = get_object_or_404(CustomField, pk=pk)
@@ -385,6 +400,7 @@ def custom_field_delete(request, pk):
     })
 
 
+@login_required
 def dashboard(request):
     """Dashboard with statistics and recent activity"""
     # Statistics
