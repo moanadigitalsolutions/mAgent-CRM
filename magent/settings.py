@@ -43,6 +43,15 @@ INSTALLED_APPS = [
     "customers",
 ]
 
+# Attempt to include django-storages only if installed to avoid dev errors
+try:
+    import storages  # type: ignore  # noqa: F401
+except ImportError:
+    STORAGES_AVAILABLE = False
+else:
+    STORAGES_AVAILABLE = True
+    INSTALLED_APPS.append("storages")
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -140,6 +149,55 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ------------------------------------------------------------------
+# Optional: Amazon S3 / CloudCube / any S3-compatible storage
+# Enable by setting either:
+#   USE_S3=True (and standard AWS_* env vars including AWS_STORAGE_BUCKET_NAME)
+#   or provisioning the Heroku CloudCube add-on which supplies CLOUDCUBE_URL
+# CloudCube also sets standard AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
+# ------------------------------------------------------------------
+USE_S3 = (os.environ.get('USE_S3', 'False') == 'True' or bool(os.environ.get('CLOUDCUBE_URL'))) and STORAGES_AVAILABLE
+if USE_S3:
+    # Base AWS credentials (expected from Heroku config vars or CloudCube)
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')  # optional
+    AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')  # optional (for non-AWS providers)
+
+    cloudcube_url = os.environ.get('CLOUDCUBE_URL')
+    bucket_name = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+    aws_location = ''
+    if cloudcube_url and not bucket_name:
+        # Parse CloudCube URL: https://<cube-id>.cloud-cube.s3.amazonaws.com/<random-prefix>
+        from urllib.parse import urlparse
+        parsed = urlparse(cloudcube_url)
+        host_parts = parsed.netloc.split('.')
+        # <cube-id>.cloud-cube.s3.amazonaws.com -> bucket '<cube-id>.cloud-cube'
+        if host_parts:
+            bucket_name = f"{host_parts[0]}.cloud-cube"
+        # Path holds a random prefix we should retain for namespacing
+        aws_location = parsed.path.lstrip('/')
+    AWS_STORAGE_BUCKET_NAME = bucket_name
+    AWS_LOCATION = aws_location
+
+    if not AWS_STORAGE_BUCKET_NAME:
+        # Fail safe: do not enable S3 if bucket missing
+        USE_S3 = False
+    else:
+        DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+        # Cache control & performance tuning
+        AWS_S3_OBJECT_PARAMETERS = {
+            'CacheControl': 'max-age=86400, s-maxage=86400'
+        }
+        # Optional reduced ACLs (newer AWS policy style)
+        AWS_DEFAULT_ACL = None
+        # Build MEDIA_URL
+        if AWS_LOCATION:
+            MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}/"
+        else:
+            MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
