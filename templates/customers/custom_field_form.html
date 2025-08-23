@@ -81,7 +81,7 @@
                         <div class="form-text">Choose the appropriate input type</div>
                     </div>
 
-                    <div class="mb-3" id="options-field" style="display: none;">
+                    <div class="mb-3 d-none" id="options-field">
                         <label for="{{ form.options.id_for_label }}" class="form-label">
                             Options
                         </label>
@@ -196,10 +196,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const optionsField = document.getElementById('options-field');
     
     function toggleOptionsField() {
+        if (!optionsField) return;
         if (fieldTypeSelect.value === 'select') {
-            optionsField.style.display = 'block';
+            optionsField.classList.remove('d-none');
         } else {
-            optionsField.style.display = 'none';
+            optionsField.classList.add('d-none');
         }
     }
     

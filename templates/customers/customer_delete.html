@@ -58,7 +58,7 @@
             <a href="{% url 'customers:customer_detail' customer.id %}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left"></i> Cancel
             </a>
-            <form method="post" style="display: inline;">
+            <form method="post" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-trash"></i> Delete Customer

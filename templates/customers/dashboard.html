@@ -79,8 +79,7 @@
                     {% for customer in recent_customers %}
                     <div class="d-flex align-items-center justify-content-between py-2 {% if not forloop.last %}border-bottom{% endif %}">
                         <div class="d-flex align-items-center">
-                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
-                                 style="width: 40px; height: 40px;">
+                       <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3 avatar-circle">
                                 <span class="text-white fw-bold">
                                     {{ customer.first_name|first }}{{ customer.last_name|first }}
                                 </span>
@@ -93,8 +92,8 @@
                         </div>
                         <div class="text-end">
                             <div class="text-muted small">{{ customer.created_at|timesince }} ago</div>
-                            <a href="{% url 'customers:customer_detail' customer.id %}" 
-                               class="btn btn-outline-primary btn-sm">
+                                     <a href="{% url 'customers:customer_detail' customer.id %}" 
+                                         class="btn btn-outline-primary btn-sm" aria-label="View {{ customer.full_name }} details">
                                 <i class="bi bi-eye"></i>
                             </a>
                         </div>
@@ -132,8 +131,8 @@
                         </div>
                         <div class="d-flex align-items-center">
                             <span class="badge bg-primary rounded-pill me-2">{{ count }}</span>
-                            <a href="{% url 'customers:customer_list' %}?city={{ city }}" 
-                               class="btn btn-outline-primary btn-sm">
+                                     <a href="{% url 'customers:customer_list' %}?city={{ city }}" 
+                                         class="btn btn-outline-primary btn-sm" aria-label="Filter customers by city {{ city }}">
                                 <i class="bi bi-arrow-right"></i>
                             </a>
                         </div>
