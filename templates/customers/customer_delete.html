@@ -5,11 +5,11 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
+        <nav aria-label="Breadcrumb">
+            <ol class="breadcrumb mb-2">
                 <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">Customers</a></li>
                 <li class="breadcrumb-item"><a href="{% url 'customers:customer_detail' customer.id %}">{{ customer.full_name }}</a></li>
-                <li class="breadcrumb-item active">Delete</li>
+                <li class="breadcrumb-item active" aria-current="page">Delete</li>
             </ol>
         </nav>
         <h1 class="h3 mb-0 text-danger">Delete Customer</h1>

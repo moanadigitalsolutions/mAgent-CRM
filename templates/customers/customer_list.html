@@ -60,12 +60,12 @@
     </form>
     
     <!-- Quick Filter Chips -->
-    <div class="mt-3">
-        <small class="text-muted">Quick Filters:</small>
-        <span class="filter-chip" data-filter="city:Auckland">Auckland</span>
-        <span class="filter-chip" data-filter="city:Wellington">Wellington</span>
-        <span class="filter-chip" data-filter="city:Christchurch">Christchurch</span>
-        <span class="filter-chip" data-filter="active:true">Active Only</span>
+    <div class="mt-3" aria-label="Quick customer filters">
+        <small class="text-muted d-block mb-1">Quick Filters:</small>
+        <span class="filter-chip" role="button" tabindex="0" data-filter="city:Auckland" aria-label="Filter by city Auckland">Auckland</span>
+        <span class="filter-chip" role="button" tabindex="0" data-filter="city:Wellington" aria-label="Filter by city Wellington">Wellington</span>
+        <span class="filter-chip" role="button" tabindex="0" data-filter="city:Christchurch" aria-label="Filter by city Christchurch">Christchurch</span>
+        <span class="filter-chip" role="button" tabindex="0" data-filter="active:true" aria-label="Filter active customers only">Active Only</span>
     </div>
 </div>
 
@@ -179,36 +179,32 @@
     
     <!-- Pagination -->
     {% if customers.has_other_pages %}
-    <nav aria-label="Customer pagination">
+    <nav aria-label="Customer pages">
         <ul class="pagination mb-0">
             {% if customers.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
-                        &laquo; First
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" aria-label="First page">
+                        <span aria-hidden="true">&laquo; First</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ customers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
-                        Previous
+                    <a class="page-link" href="?page={{ customers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" aria-label="Previous page">
+                        <span aria-hidden="true">Previous</span>
                     </a>
                 </li>
             {% endif %}
-
-            <li class="page-item active">
-                <span class="page-link">
-                    Page {{ customers.number }} of {{ customers.paginator.num_pages }}
-                </span>
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">Page {{ customers.number }} of {{ customers.paginator.num_pages }}</span>
             </li>
-
             {% if customers.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ customers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
-                        Next
+                    <a class="page-link" href="?page={{ customers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" aria-label="Next page">
+                        <span aria-hidden="true">Next</span>
                     </a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ customers.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}">
-                        Last &raquo;
+                    <a class="page-link" href="?page={{ customers.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" aria-label="Last page">
+                        <span aria-hidden="true">Last &raquo;</span>
                     </a>
                 </li>
             {% endif %}
