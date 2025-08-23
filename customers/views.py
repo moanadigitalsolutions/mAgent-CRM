@@ -87,9 +87,9 @@ def customer_detail(request, pk):
                 customer=customer, 
                 custom_field=field
             ).value
-            custom_values[field.id] = value
+            custom_values[field.pk] = value
         except CustomerCustomFieldValue.DoesNotExist:
-            custom_values[field.id] = ''
+            custom_values[field.pk] = ''
     
     # Get customer files
     files = customer.files.all().order_by('-uploaded_at')

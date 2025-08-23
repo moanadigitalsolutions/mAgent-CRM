@@ -33,7 +33,7 @@
         </div>
         <div class="col-md-2">
             <label for="order_by" class="form-label">Sort By</label>
-            <select name="order_by" class="form-select">
+            <select name="order_by" class="form-select" aria-label="Order customers by">
                 <option value="last_name" {% if order_by == 'last_name' %}selected{% endif %}>Last Name A-Z</option>
                 <option value="-last_name" {% if order_by == '-last_name' %}selected{% endif %}>Last Name Z-A</option>
                 <option value="first_name" {% if order_by == 'first_name' %}selected{% endif %}>First Name A-Z</option>
@@ -76,7 +76,7 @@
             <thead>
                 <tr>
                     <th width="5%">
-                        <input type="checkbox" class="form-check-input" id="select-all">
+                        <input type="checkbox" class="form-check-input" id="select-all" aria-label="Select all customers">
                     </th>
                     <th width="7%">ID</th>
                     <th width="18%">First Name</th>
@@ -90,8 +90,8 @@
                 {% for customer in customers %}
                 <tr data-customer-id="{{ customer.id }}">
                     <td>
-                        <input type="checkbox" class="form-check-input customer-checkbox" 
-                               value="{{ customer.id }}">
+               <input type="checkbox" class="form-check-input customer-checkbox" 
+                   value="{{ customer.id }}" aria-label="Select customer {{ customer.full_name }}">
                     </td>
                     <td>
                         <div class="text-muted small">
@@ -164,7 +164,7 @@
 {% if customers %}
 <div class="d-flex justify-content-between align-items-center mt-3">
     <div>
-        <select class="form-select d-inline-block" style="width: auto;" id="bulk-action">
+    <select class="form-select d-inline-block w-auto" id="bulk-action" aria-label="Bulk action">
             <option value="">Bulk Actions</option>
             <option value="activate">Activate Selected</option>
             <option value="deactivate">Deactivate Selected</option>

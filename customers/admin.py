@@ -25,9 +25,9 @@ class CustomerAdmin(admin.ModelAdmin):
     
     readonly_fields = ['created_at', 'updated_at']
     
+    @admin.display(description='Name')
     def full_name(self, obj):
         return obj.full_name
-    full_name.short_description = 'Name'
 
 
 @admin.register(CustomField)
@@ -45,9 +45,9 @@ class CustomerCustomFieldValueAdmin(admin.ModelAdmin):
     list_filter = ['custom_field']
     search_fields = ['customer__first_name', 'customer__last_name', 'value']
     
+    @admin.display(description='Value')
     def value_preview(self, obj):
         return obj.value[:50] + '...' if len(obj.value) > 50 else obj.value
-    value_preview.short_description = 'Value'
 
 
 @admin.register(CustomerFile)
@@ -57,9 +57,9 @@ class CustomerFileAdmin(admin.ModelAdmin):
     search_fields = ['customer__first_name', 'customer__last_name', 'description']
     date_hierarchy = 'uploaded_at'
     
+    @admin.display(description='File Name')
     def file_name(self, obj):
         return obj.file.name.split('/')[-1]
-    file_name.short_description = 'File Name'
 
 
 # Customize admin site header
