@@ -12,6 +12,14 @@
         <p class="text-muted mb-0">Manage your customer database</p>
     </div>
     <div>
+        {% if user.is_superuser %}
+        <a href="{% url 'customers:import_customers_page' %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-upload"></i> Import CSV
+        </a>
+        <a href="{% url 'customers:export_customers_page' %}" class="btn btn-outline-success me-2">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+        {% endif %}
         <a href="{% url 'customers:customer_create' %}" class="btn btn-primary">
             <i class="bi bi-person-plus"></i> Add Customer
         </a>
@@ -39,6 +47,15 @@
                 <option value="first_name" {% if order_by == 'first_name' %}selected{% endif %}>First Name A-Z</option>
                 <option value="city" {% if order_by == 'city' %}selected{% endif %}>City A-Z</option>
                 <option value="-created_at" {% if order_by == '-created_at' %}selected{% endif %}>Newest First</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="tag" class="form-label">Tag</label>
+            <select name="tag" class="form-select" aria-label="Filter by tag">
+                <option value="">All Tags</option>
+                {% for t in all_tags %}
+                <option value="{{ t.slug }}" {% if t.slug in selected_tags %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
             </select>
         </div>
         <div class="col-md-2">

@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Export Customers{% endblock %}
+
+{% block extra_css %}
+<style>
+    .export-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background: white;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .export-count {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    
+    .tag-checkbox {
+        margin-right: 0.5rem;
+    }
+    
+    .custom-field-info {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+    }
+    
+    .filter-form .form-control, .filter-form .form-select {
+        border-radius: 0.375rem;
+    }
+    
+    .export-btn {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .export-btn:hover {
+        background: linear-gradient(135deg, #218838, #1ba085);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    .preview-btn {
+        background: linear-gradient(135deg, #6f42c1, #6610f2);
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s ease;
+    }
+    
+    .preview-btn:hover {
+        background: linear-gradient(135deg, #5a359a, #520dc2);
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-download text-success"></i>
+                        Export Customers
+                    </h2>
+                    <p class="text-muted mb-0">Configure filters and export customer data to CSV format</p>
+                </div>
+                <div>
+                    <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Customers
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Filter Configuration -->
+                <div class="col-lg-8">
+                    <div class="export-card p-4 mb-4">
+                        <h4 class="mb-3">
+                            <i class="bi bi-funnel text-primary"></i>
+                            Filter Configuration
+                        </h4>
+                        
+                        <form method="GET" class="filter-form" id="filterForm">
+                            <div class="row">
+                                <!-- Search Filter -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="search" class="form-label">Search</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="search" 
+                                           name="search"
+                                           value="{{ search_query }}"
+                                           placeholder="Name, email, or mobile..."
+                                           onchange="updateExportCount()">
+                                    <div class="form-text">Search in names, email, and mobile fields</div>
+                                </div>
+                                
+                                <!-- City Filter -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="city" class="form-label">City</label>
+                                    <select class="form-select" id="city" name="city" onchange="updateExportCount()">
+                                        <option value="">All Cities</option>
+                                        {% for city in cities %}
+                                            <option value="{{ city }}" {% if city == selected_city %}selected{% endif %}>
+                                                {{ city }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Tags Filter -->
+                            {% if tags %}
+                            <div class="mb-3">
+                                <label class="form-label">Tags</label>
+                                <div class="filter-section p-3">
+                                    <div class="row">
+                                        {% for tag in tags %}
+                                        <div class="col-md-4 col-lg-3 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input tag-checkbox" 
+                                                       type="checkbox" 
+                                                       id="tag_{{ tag.slug }}"
+                                                       name="tag_check"
+                                                       value="{{ tag.slug }}"
+                                                       {% if tag.slug in selected_tags %}checked{% endif %}
+                                                       onchange="updateTagFilter(); updateExportCount();">
+                                                <label class="form-check-label" for="tag_{{ tag.slug }}">
+                                                    <span class="badge" style="background-color: {{ tag.color }};">
+                                                        {{ tag.name }}
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <input type="hidden" id="tag" name="tag" value="{{ selected_tags|join:',' }}">
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Update Filters Button -->
+                            <div class="mb-3">
+                                <button type="button" class="preview-btn" onclick="updateExportCount()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                    Update Preview
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Export Summary & Actions -->
+                <div class="col-lg-4">
+                    <div class="export-card p-4 mb-4">
+                        <h4 class="mb-3">
+                            <i class="bi bi-info-circle text-info"></i>
+                            Export Summary
+                        </h4>
+                        
+                        <div class="text-center mb-4">
+                            <div class="export-count mb-2" id="exportCount">
+                                {{ export_count }}
+                            </div>
+                            <p class="text-muted mb-0">customers will be exported</p>
+                        </div>
+                        
+                        <!-- Export Button -->
+                        <div class="d-grid mb-3">
+                            <button type="button" class="export-btn" onclick="downloadCSV()" id="exportBtn">
+                                <i class="bi bi-download"></i>
+                                Download CSV Export
+                            </button>
+                        </div>
+                        
+                        <!-- Export Info -->
+                        <div class="custom-field-info p-3 rounded">
+                            <h6 class="mb-2">
+                                <i class="bi bi-list-columns"></i>
+                                Export Includes:
+                            </h6>
+                            <ul class="list-unstyled mb-0 small">
+                                <li><i class="bi bi-check text-success"></i> Core customer fields</li>
+                                <li><i class="bi bi-check text-success"></i> Contact information</li>
+                                <li><i class="bi bi-check text-success"></i> Address details</li>
+                                <li><i class="bi bi-check text-success"></i> Tags and metadata</li>
+                                {% if custom_fields %}
+                                <li><i class="bi bi-check text-success"></i> {{ custom_fields.count }} custom field{{ custom_fields.count|pluralize }}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Fields Info -->
+                    {% if custom_fields %}
+                    <div class="export-card p-4">
+                        <h5 class="mb-3">
+                            <i class="bi bi-gear text-secondary"></i>
+                            Custom Fields
+                        </h5>
+                        <p class="text-muted small mb-3">
+                            The following custom fields will be included in the export:
+                        </p>
+                        <div class="small">
+                            {% for field in custom_fields %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>{{ field.label }}</span>
+                                <span class="badge bg-secondary">{{ field.get_field_type_display }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateTagFilter() {
+    const checkboxes = document.querySelectorAll('input[name="tag_check"]:checked');
+    const selectedTags = Array.from(checkboxes).map(cb => cb.value);
+    document.getElementById('tag').value = selectedTags.join(',');
+}
+
+function updateExportCount() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    
+    // Update URL without page reload
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+    
+    // Fetch updated count (you could implement an AJAX endpoint for this)
+    // For now, we'll reload the page to get the updated count
+    window.location.reload();
+}
+
+function downloadCSV() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    
+    // Create download URL
+    const downloadUrl = `{% url 'customers:export_customers_csv' %}?${params.toString()}`;
+    
+    // Trigger download
+    window.location.href = downloadUrl;
+    
+    // Show success message
+    const btn = document.getElementById('exportBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check"></i> Download Started...';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 2000);
+}
+
+// Initialize tag filter on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateTagFilter();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,504 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import Customers{% endblock %}
+
+{% block extra_css %}
+<style>
+    .import-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background: white;
+    }
+    
+    .step-card {
+        background: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        border-radius: 0.375rem;
+    }
+    
+    .upload-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-zone:hover, .upload-zone.dragover {
+        border-color: #0d6efd;
+        background: #e3f2fd;
+    }
+    
+    .upload-zone.error {
+        border-color: #dc3545;
+        background: #f8d7da;
+    }
+    
+    .upload-btn {
+        background: linear-gradient(135deg, #0d6efd, #6610f2);
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .upload-btn:hover {
+        background: linear-gradient(135deg, #0b5ed7, #520dc2);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+    }
+    
+    .upload-btn:disabled {
+        background: #6c757d;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .progress-container {
+        display: none;
+    }
+    
+    .results-container {
+        display: none;
+    }
+    
+    .sample-table {
+        font-size: 0.875rem;
+    }
+    
+    .required-column {
+        background: #fff3cd;
+    }
+    
+    .optional-column {
+        background: #d1ecf1;
+    }
+    
+    .error-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-upload text-primary"></i>
+                        Import Customers
+                    </h2>
+                    <p class="text-muted mb-0">Upload a CSV file to import customer data</p>
+                </div>
+                <div>
+                    <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Customers
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Import Steps -->
+                <div class="col-lg-4">
+                    <div class="import-card p-4 mb-4">
+                        <h4 class="mb-3">
+                            <i class="bi bi-list-ol text-success"></i>
+                            Import Steps
+                        </h4>
+                        
+                        <div class="step-card p-3 mb-3">
+                            <h6 class="mb-2">
+                                <span class="badge bg-primary me-2">1</span>
+                                Prepare CSV File
+                            </h6>
+                            <p class="mb-0 small text-muted">
+                                Create a CSV file with the required columns listed below.
+                            </p>
+                        </div>
+                        
+                        <div class="step-card p-3 mb-3">
+                            <h6 class="mb-2">
+                                <span class="badge bg-primary me-2">2</span>
+                                Upload File
+                            </h6>
+                            <p class="mb-0 small text-muted">
+                                Select your CSV file and configure import options.
+                            </p>
+                        </div>
+                        
+                        <div class="step-card p-3">
+                            <h6 class="mb-2">
+                                <span class="badge bg-primary me-2">3</span>
+                                Review Results
+                            </h6>
+                            <p class="mb-0 small text-muted">
+                                Review the import results and any errors or duplicates.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- CSV Format Info -->
+                    <div class="import-card p-4">
+                        <h5 class="mb-3">
+                            <i class="bi bi-info-circle text-info"></i>
+                            CSV Format Requirements
+                        </h5>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm sample-table">
+                                <thead>
+                                    <tr>
+                                        <th>Column</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="required-column">
+                                        <td>First Name</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr class="required-column">
+                                        <td>Last Name</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr class="required-column">
+                                        <td>Email</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr class="required-column">
+                                        <td>Mobile</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr class="required-column">
+                                        <td>Street Address</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr class="required-column">
+                                        <td>Suburb</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr class="required-column">
+                                        <td>City</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr class="required-column">
+                                        <td>Postcode</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    {% for field in custom_fields %}
+                                    <tr class="optional-column">
+                                        <td>Custom: {{ field.label }}</td>
+                                        <td><span class="badge bg-info">Optional</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-exclamation-triangle text-warning"></i>
+                                File must be UTF-8 encoded and less than 10MB
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Upload Section -->
+                <div class="col-lg-8">
+                    <div class="import-card p-4 mb-4">
+                        <h4 class="mb-3">
+                            <i class="bi bi-cloud-upload text-primary"></i>
+                            Upload CSV File
+                        </h4>
+                        
+                        <!-- Upload Form -->
+                        <form id="importForm" enctype="multipart/form-data">
+                            <!-- File Upload Zone -->
+                            <div class="upload-zone p-5 text-center mb-4" id="uploadZone">
+                                <div id="uploadContent">
+                                    <i class="bi bi-cloud-upload display-4 text-muted mb-3"></i>
+                                    <h5 class="mb-2">Choose CSV File</h5>
+                                    <p class="text-muted mb-3">
+                                        Drag and drop your CSV file here, or click to browse
+                                    </p>
+                                    <input type="file" 
+                                           id="csvFile" 
+                                           name="csv_file" 
+                                           accept=".csv" 
+                                           class="d-none">
+                                    <button type="button" 
+                                            class="btn btn-outline-primary" 
+                                            onclick="document.getElementById('csvFile').click()">
+                                        <i class="bi bi-folder2-open"></i> Browse Files
+                                    </button>
+                                </div>
+                                <div id="fileSelected" class="d-none">
+                                    <i class="bi bi-file-earmark-text display-4 text-success mb-3"></i>
+                                    <h5 class="mb-2 text-success">File Selected</h5>
+                                    <p class="mb-3" id="fileName"></p>
+                                    <button type="button" 
+                                            class="btn btn-outline-secondary" 
+                                            onclick="clearFile()">
+                                        <i class="bi bi-x-circle"></i> Choose Different File
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Import Options -->
+                            <div class="mb-4">
+                                <h5 class="mb-3">Import Options</h5>
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="skipDuplicates" 
+                                           name="skip_duplicates"
+                                           value="true">
+                                    <label class="form-check-label" for="skipDuplicates">
+                                        <strong>Skip Duplicates</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            Skip customers with existing email addresses. 
+                                            If unchecked, existing customers will be updated.
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Upload Button -->
+                            <div class="d-grid">
+                                <button type="submit" class="upload-btn" id="uploadBtn" disabled>
+                                    <i class="bi bi-upload"></i>
+                                    Start Import
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- Progress -->
+                        <div class="progress-container mt-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                <span>Processing your file...</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" 
+                                     style="width: 100%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Results -->
+                        <div class="results-container mt-4">
+                            <div class="alert alert-success" id="successAlert" style="display: none;">
+                                <h5 class="alert-heading">
+                                    <i class="bi bi-check-circle"></i>
+                                    Import Completed Successfully!
+                                </h5>
+                                <div id="successResults"></div>
+                            </div>
+                            
+                            <div class="alert alert-danger" id="errorAlert" style="display: none;">
+                                <h5 class="alert-heading">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Import Errors
+                                </h5>
+                                <div id="errorResults"></div>
+                            </div>
+                            
+                            <div class="alert alert-warning" id="warningAlert" style="display: none;">
+                                <h5 class="alert-heading">
+                                    <i class="bi bi-exclamation-circle"></i>
+                                    Import Completed with Warnings
+                                </h5>
+                                <div id="warningResults"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const csvFile = document.getElementById('csvFile');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const importForm = document.getElementById('importForm');
+    const progressContainer = document.querySelector('.progress-container');
+    const resultsContainer = document.querySelector('.results-container');
+    
+    // File upload handling
+    csvFile.addEventListener('change', handleFileSelect);
+    
+    // Drag and drop
+    uploadZone.addEventListener('dragover', handleDragOver);
+    uploadZone.addEventListener('drop', handleFileDrop);
+    uploadZone.addEventListener('click', () => csvFile.click());
+    
+    // Form submission
+    importForm.addEventListener('submit', handleFormSubmit);
+    
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) {
+            showFileSelected(file);
+        }
+    }
+    
+    function handleDragOver(e) {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    }
+    
+    function handleFileDrop(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+                csvFile.files = files;
+                showFileSelected(file);
+            } else {
+                showError('Please select a CSV file');
+            }
+        }
+    }
+    
+    function showFileSelected(file) {
+        document.getElementById('uploadContent').classList.add('d-none');
+        document.getElementById('fileSelected').classList.remove('d-none');
+        document.getElementById('fileName').textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+        uploadBtn.disabled = false;
+        uploadZone.classList.remove('error');
+    }
+    
+    function clearFile() {
+        csvFile.value = '';
+        document.getElementById('uploadContent').classList.remove('d-none');
+        document.getElementById('fileSelected').classList.add('d-none');
+        uploadBtn.disabled = true;
+        hideResults();
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function showError(message) {
+        uploadZone.classList.add('error');
+        // You could show an error message here
+    }
+    
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        
+        if (!csvFile.files[0]) {
+            showError('Please select a file');
+            return;
+        }
+        
+        // Show progress
+        progressContainer.style.display = 'block';
+        uploadBtn.disabled = true;
+        hideResults();
+        
+        // Submit form
+        const formData = new FormData(importForm);
+        
+        fetch('{% url "customers:import_customers_csv" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            progressContainer.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            uploadBtn.disabled = false;
+            
+            if (data.success) {
+                showSuccessResults(data.results);
+            } else {
+                showErrorResults(data.error);
+            }
+        })
+        .catch(error => {
+            progressContainer.style.display = 'none';
+            uploadBtn.disabled = false;
+            showErrorResults('Network error occurred. Please try again.');
+        });
+    }
+    
+    function showSuccessResults(results) {
+        const successAlert = document.getElementById('successAlert');
+        const successResults = document.getElementById('successResults');
+        
+        let html = '<div class="row text-center">';
+        html += '<div class="col-md-3"><div class="h4 text-primary">' + results.total_rows + '</div><small>Total Rows</small></div>';
+        html += '<div class="col-md-3"><div class="h4 text-success">' + results.created + '</div><small>Created</small></div>';
+        html += '<div class="col-md-3"><div class="h4 text-info">' + results.updated + '</div><small>Updated</small></div>';
+        html += '<div class="col-md-3"><div class="h4 text-warning">' + results.skipped + '</div><small>Skipped</small></div>';
+        html += '</div>';
+        
+        if (results.duplicates_found > 0) {
+            html += '<div class="mt-3"><small class="text-muted"><i class="bi bi-info-circle"></i> ' + results.duplicates_found + ' duplicates found</small></div>';
+        }
+        
+        if (results.errors.length > 0) {
+            html += '<div class="mt-3"><strong>Errors:</strong><div class="error-list"><ul class="small">';
+            results.errors.forEach(error => {
+                html += '<li>' + error + '</li>';
+            });
+            html += '</ul></div></div>';
+        }
+        
+        successResults.innerHTML = html;
+        successAlert.style.display = 'block';
+    }
+    
+    function showErrorResults(error) {
+        const errorAlert = document.getElementById('errorAlert');
+        const errorResults = document.getElementById('errorResults');
+        
+        errorResults.innerHTML = '<p>' + error + '</p>';
+        errorAlert.style.display = 'block';
+    }
+    
+    function hideResults() {
+        document.getElementById('successAlert').style.display = 'none';
+        document.getElementById('errorAlert').style.display = 'none';
+        document.getElementById('warningAlert').style.display = 'none';
+        resultsContainer.style.display = 'none';
+    }
+});
+
+// Add CSRF token to all forms
+document.addEventListener('DOMContentLoaded', function() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!token) {
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        document.getElementById('importForm').appendChild(csrfToken);
+    }
+});
+</script>
+{% endblock %}

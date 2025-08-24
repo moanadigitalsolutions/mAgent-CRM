@@ -1,6 +1,6 @@
 from django import forms
 from django.core.validators import RegexValidator
-from .models import Customer, CustomField, CustomerFile
+from .models import Customer, CustomField, CustomerFile, Tag
 
 
 class CustomerForm(forms.ModelForm):
@@ -10,7 +10,7 @@ class CustomerForm(forms.ModelForm):
         model = Customer
         fields = [
             'first_name', 'last_name', 'mobile', 'email',
-            'street_address', 'suburb', 'city', 'postcode', 'is_active'
+            'street_address', 'suburb', 'city', 'postcode', 'is_active', 'tags'
         ]
         widgets = {
             'first_name': forms.TextInput(attrs={
@@ -47,6 +47,10 @@ class CustomerForm(forms.ModelForm):
             }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
+            }),
+            'tags': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+                'size': 5
             })
         }
     

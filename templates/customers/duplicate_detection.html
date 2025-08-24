@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% load static customer_extras %}
+
+{% block title %}Duplicate Detection - mAgent{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="Breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">Customers</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Duplicate Detection</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0">Duplicate Detection</h1>
+        <p class="text-muted mb-0">Identify and manage potential duplicate customer records</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Customers
+        </a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h3 class="text-warning mb-1">{{ total_groups }}</h3>
+                <p class="text-muted mb-0">Duplicate Groups</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h3 class="text-danger mb-1">{{ total_duplicates }}</h3>
+                <p class="text-muted mb-0">Total Duplicates</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h3 class="text-info mb-1">{{ duplicate_groups|length }}</h3>
+                <p class="text-muted mb-0">Groups to Review</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if duplicate_groups %}
+<!-- Duplicate Groups -->
+<div class="duplicate-groups">
+    {% for group in duplicate_groups %}
+    <div class="card mb-4 duplicate-group">
+        <div class="card-header bg-warning bg-opacity-10 border-warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                    Duplicate Group #{{ forloop.counter }}
+                    <span class="badge bg-warning text-dark ms-2">{{ group.group_size }} customers</span>
+                </h5>
+                <small class="text-muted">Max Confidence: {{ group.max_confidence|floatformat:1 }}%</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Primary Customer -->
+            <div class="row">
+                <div class="col-lg-6">
+                    <h6 class="text-primary mb-3">
+                        <i class="bi bi-person-circle"></i> Primary Record
+                    </h6>
+                    <div class="customer-card border border-primary bg-primary bg-opacity-5">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <a href="{% url 'customers:customer_detail' group.primary_customer.id %}" class="text-decoration-none">
+                                    {{ group.primary_customer.full_name }}
+                                </a>
+                            </h6>
+                            <div class="customer-details">
+                                <p class="mb-1"><i class="bi bi-envelope text-muted"></i> {{ group.primary_customer.email }}</p>
+                                <p class="mb-1"><i class="bi bi-telephone text-muted"></i> {{ group.primary_customer.mobile }}</p>
+                                <p class="mb-1"><i class="bi bi-geo-alt text-muted"></i> {{ group.primary_customer.city }}</p>
+                                <p class="mb-0"><small class="text-muted">Created: {{ group.primary_customer.created_at|date:"M d, Y" }}</small></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Potential Duplicates -->
+                <div class="col-lg-6">
+                    <h6 class="text-danger mb-3">
+                        <i class="bi bi-people-fill"></i> Potential Duplicates
+                    </h6>
+                    {% for duplicate in group.duplicates %}
+                    <div class="customer-card border border-danger bg-danger bg-opacity-5 mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title mb-0">
+                                    <a href="{% url 'customers:customer_detail' duplicate.customer.id %}" class="text-decoration-none">
+                                        {{ duplicate.customer.full_name }}
+                                    </a>
+                                </h6>
+                                <span class="badge bg-danger">{{ duplicate.confidence_score|floatformat:1 }}%</span>
+                            </div>
+                            <div class="customer-details mb-2">
+                                <p class="mb-1"><i class="bi bi-envelope text-muted"></i> {{ duplicate.customer.email }}</p>
+                                <p class="mb-1"><i class="bi bi-telephone text-muted"></i> {{ duplicate.customer.mobile }}</p>
+                                <p class="mb-1"><i class="bi bi-geo-alt text-muted"></i> {{ duplicate.customer.city }}</p>
+                                <p class="mb-2"><small class="text-muted">Created: {{ duplicate.customer.created_at|date:"M d, Y" }}</small></p>
+                            </div>
+                            <div class="match-reasons">
+                                <h6 class="small text-muted mb-1">Match Reasons:</h6>
+                                <ul class="list-unstyled mb-0">
+                                    {% for reason in duplicate.match_reasons %}
+                                    <li class="small"><i class="bi bi-check-circle text-success"></i> {{ reason }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            {% if user|lacks_group:'ReadOnly' %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="border-top pt-3">
+                        <h6 class="mb-2">Actions:</h6>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="reviewGroup({{ forloop.counter0 }})">
+                                <i class="bi bi-eye"></i> Review Group
+                            </button>
+                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="ignoreGroup({{ forloop.counter0 }})">
+                                <i class="bi bi-x-circle"></i> Ignore Group
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="compareCustomers({{ group.primary_customer.id }}, {{ group.duplicates.0.customer.id }})">
+                                <i class="bi bi-arrows-angle-expand"></i> Compare Records
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<!-- No Duplicates Found -->
+<div class="card border-success">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+        <h4 class="text-success">No Duplicates Found</h4>
+        <p class="text-muted mb-4">Great! Your customer database appears to be clean with no obvious duplicate records.</p>
+        <a href="{% url 'customers:customer_list' %}" class="btn btn-success">
+            <i class="bi bi-people"></i> View All Customers
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Compare Modal -->
+<div class="modal fade" id="compareModal" tabindex="-1" aria-labelledby="compareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="compareModalLabel">
+                    <i class="bi bi-arrows-angle-expand me-2"></i>Compare Customer Records
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="compare-content">
+                <!-- Comparison content will be loaded here -->
+                <div class="text-center py-4">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading comparison...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function reviewGroup(groupIndex) {
+    // Placeholder for group review functionality
+    showNotification('Group review functionality coming soon', 'info');
+}
+
+function ignoreGroup(groupIndex) {
+    if (confirm('Are you sure you want to ignore this duplicate group?')) {
+        // Placeholder for ignore functionality
+        showNotification('Group marked as ignored', 'success');
+        // In a full implementation, you would send an AJAX request here
+    }
+}
+
+function compareCustomers(primaryId, duplicateId) {
+    const modal = new bootstrap.Modal(document.getElementById('compareModal'));
+    const content = document.getElementById('compare-content');
+    
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading comparison...</span>
+            </div>
+            <p class="mt-2">Loading customer comparison...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Simulate loading comparison data
+    setTimeout(() => {
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary">Primary Record (ID: ${primaryId})</h6>
+                    <div class="border border-primary bg-primary bg-opacity-5 p-3 rounded">
+                        <p class="mb-0">Detailed comparison functionality would be implemented here.</p>
+                        <p class="mb-0">This would show side-by-side field comparisons.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-danger">Duplicate Record (ID: ${duplicateId})</h6>
+                    <div class="border border-danger bg-danger bg-opacity-5 p-3 rounded">
+                        <p class="mb-0">Field-by-field comparison with differences highlighted.</p>
+                        <p class="mb-0">Merge options would be available here.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }, 1000);
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 4000);
+}
+</script>
+{% endblock %}

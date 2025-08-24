@@ -1,4 +1,4 @@
-{% load static %}
+{% load static customer_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,7 +34,7 @@
                             <i class="bi bi-people"></i> Customers
                         </a>
                     </li>
-                    {% if user.is_authenticated and not user.groups.filter(name='ReadOnly').exists %}
+                    {% if user.is_authenticated and user|lacks_group:'ReadOnly' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'customers:customer_create' %}">
                             <i class="bi bi-person-plus"></i> Add Customer
@@ -45,6 +45,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'customers:custom_field_list' %}">
                             <i class="bi bi-gear"></i> Custom Fields
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'customers:duplicate_detection' %}">
+                            <i class="bi bi-people"></i> Duplicates
                         </a>
                     </li>
                     {% endif %}
@@ -82,7 +87,7 @@
                                 <i class="bi bi-people"></i> All Customers
                             </a>
                         </li>
-                        {% if user.is_authenticated and not user.groups.filter(name='ReadOnly').exists %}
+                        {% if user.is_authenticated and user|lacks_group:'ReadOnly' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'customers:customer_create' %}">
                                 <i class="bi bi-person-plus"></i> Add New Customer
@@ -93,6 +98,21 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'customers:custom_field_list' %}">
                                 <i class="bi bi-list-ul"></i> Custom Fields
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:duplicate_detection' %}">
+                                <i class="bi bi-exclamation-triangle"></i> Duplicate Detection
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:import_customers_page' %}">
+                                <i class="bi bi-upload"></i> Import Data
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'customers:export_customers_page' %}">
+                                <i class="bi bi-download"></i> Export Data
                             </a>
                         </li>
                         {% endif %}

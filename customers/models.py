@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from django.conf import settings
+from django.utils.text import slugify
 
 
 class Customer(models.Model):
@@ -37,6 +38,7 @@ class Customer(models.Model):
         on_delete=models.SET_NULL,
         related_name='customers_created'
     )
+    tags = models.ManyToManyField('Tag', blank=True, related_name='customers')
     
     class Meta:
         ordering = ['last_name', 'first_name']
@@ -161,3 +163,64 @@ class CustomerFile(models.Model):
             return f"{size:.1f} TB"
         except:
             return "Unknown"
+
+
+class Tag(models.Model):
+    """Simple tag for categorizing customers"""
+
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=60, unique=True, blank=True)
+    color = models.CharField(max_length=7, default='#0d6efd', help_text="Hex color (e.g. #0d6efd)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                models.functions.Lower('name'), name='uniq_tag_name_ci'
+            )
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name)[:55]
+            slug_candidate = base
+            idx = 1
+            while Tag.objects.filter(slug=slug_candidate).exclude(pk=self.pk).exists():
+                slug_candidate = f"{base}-{idx}"[:60]
+                idx += 1
+            self.slug = slug_candidate
+        super().save(*args, **kwargs)
+
+
+class CustomerNote(models.Model):
+    """Notes and timeline entries for customer interactions"""
+    
+    NOTE_TYPES = [
+        ('general', 'General Note'),
+        ('call', 'Phone Call'),
+        ('meeting', 'Meeting'),
+        ('email', 'Email'),
+        ('task', 'Task'),
+        ('other', 'Other'),
+    ]
+    
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='notes')
+    note = models.TextField(help_text="Note content")
+    note_type = models.CharField(max_length=20, choices=NOTE_TYPES, default='general')
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='customer_notes'
+    )
+    is_important = models.BooleanField(default=False, help_text="Mark as important/priority")
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"{self.customer} - {self.get_note_type_display()} ({self.created_at.strftime('%Y-%m-%d')})"

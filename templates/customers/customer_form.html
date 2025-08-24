@@ -320,6 +320,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/customer-validation.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-format mobile number
@@ -352,6 +353,15 @@ document.addEventListener('DOMContentLoaded', function() {
             this.value = this.value.replace(/\D/g, '').substring(0, 4);
         });
     }
+
+    // Initialize inline validation
+    {% if customer %}
+    const validator = new CustomerFormValidator({
+        customerId: {{ customer.id }}
+    });
+    {% else %}
+    const validator = new CustomerFormValidator();
+    {% endif %}
 });
 </script>
 {% endblock %}

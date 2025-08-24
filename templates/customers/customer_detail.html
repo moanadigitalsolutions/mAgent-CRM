@@ -1,5 +1,5 @@
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 {% extends 'base.html' %}
-{% load static %}
+{% load static customer_extras %}
 
 {% block title %}{{ customer.full_name }} - Customer Details{% endblock %}
 
@@ -29,6 +29,45 @@
 <div class="row">
     <!-- Customer Information -->
     <div class="col-lg-8">
+        <!-- Tags -->
+        <div class="customer-card mb-4" id="tag-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-tags"></i> Tags</h5>
+                {% if user|lacks_group:'ReadOnly' %}
+                <form class="d-flex gap-2" id="add-tag-form" data-customer-id="{{ customer.id }}" novalidate>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" placeholder="Add tag" aria-label="Tag name" name="tag" required maxlength="50">
+                        <input type="color" class="form-control form-control-color" name="color" value="#0d6efd" title="Tag color" aria-label="Tag colour picker">
+                        <button class="btn btn-outline-light" type="submit" id="add-tag-btn">
+                            <i class="bi bi-plus" aria-hidden="true"></i>
+                            <span class="visually-hidden">Add tag</span>
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div id="tag-container" class="tag-container" aria-live="polite" aria-relevant="additions removals">
+                    {% if customer.tags.all %}
+                        {% for tag in customer.tags.all %}
+                        <span class="badge tag-badge rounded-pill me-1 mb-1" data-tag-slug="{{ tag.slug }}" data-color="{{ tag.color }}">
+                            <span class="tag-label">{{ tag.name }}</span>
+                            {% if user|lacks_group:'ReadOnly' %}
+                            <button type="button" class="tag-remove-btn ms-1" data-tag-slug="{{ tag.slug }}">
+                                <span aria-hidden="true">&times;</span>
+                                <span class="visually-hidden">Remove tag {{ tag.name }}</span>
+                            </button>
+                            {% endif %}
+                        </span>
+                        {% empty %}
+                        <span class="text-muted" id="no-tags-placeholder">No tags yet</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-muted" id="no-tags-placeholder">No tags yet</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
         <div class="customer-card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
@@ -156,6 +195,34 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Notes & Timeline -->
+        <div class="customer-card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-chat-left-text"></i> Notes & Timeline</h5>
+                {% if user|lacks_group:'ReadOnly' %}
+                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addNoteModal">
+                    <i class="bi bi-plus"></i> Add Note
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div id="notes-timeline" class="notes-timeline">
+                    <!-- Notes will be loaded here via JavaScript -->
+                    <div class="text-center text-muted py-4" id="notes-loading">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading notes...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Loading timeline...</p>
+                    </div>
+                </div>
+                <div class="text-center mt-3" id="load-more-notes" style="display: none;">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="loadMoreNotes()">
+                        Load More Notes
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Sidebar -->
@@ -256,6 +323,57 @@
                 <p class="text-muted text-center">No files uploaded yet</p>
                 {% endif %}
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addNoteModalLabel">
+                    <i class="bi bi-chat-left-text me-2"></i>Add Note
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="add-note-form" data-customer-id="{{ customer.id }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="note-type" class="form-label">Note Type</label>
+                            <select class="form-select" id="note-type" name="note_type" required>
+                                <option value="general">General Note</option>
+                                <option value="call">Phone Call</option>
+                                <option value="meeting">Meeting</option>
+                                <option value="email">Email</option>
+                                <option value="task">Task</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="is-important" name="is_important">
+                                <label class="form-check-label" for="is-important">
+                                    <i class="bi bi-star"></i> Mark as Important
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="note-content" class="form-label">Note Content</label>
+                        <textarea class="form-control" id="note-content" name="note" rows="6" 
+                                  placeholder="Enter your note here..." required></textarea>
+                        <div class="form-text">Describe the interaction, call details, meeting notes, or any relevant information.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Save Note
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -371,6 +489,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize file preview functionality
     initializeFilePreview();
+
+    // Initialize tag management
+    initializeTagging();
+
+    // Initialize notes management
+    initializeNotes();
 });
 
 // Simplified persistent upload logic (no DOM replacement to avoid dialog re-open)
@@ -852,6 +976,340 @@ function showTextPreview(fileUrl) {
 
 function showDefaultPreview() {
     document.getElementById('defaultPreview').style.display = 'block';
+}
+
+// ===================== TAGGING ===================== //
+function initializeTagging() {
+    const tagContainer = document.getElementById('tag-container');
+    if (!tagContainer) return;
+    applyTagColors();
+    bindRemoveTagHandlers();
+    const form = document.getElementById('add-tag-form');
+    if (form) {
+        form.addEventListener('submit', handleAddTagSubmit, { once: false });
+    }
+}
+
+function applyTagColors() {
+    document.querySelectorAll('#tag-container .tag-badge').forEach(badge => {
+        const color = badge.getAttribute('data-color');
+        if (color) {
+            badge.style.backgroundColor = color;
+        }
+    });
+}
+
+function handleAddTagSubmit(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const customerId = form.getAttribute('data-customer-id');
+    const tagInput = form.querySelector('input[name="tag"]');
+    const colorInput = form.querySelector('input[name="color"]');
+    const tagName = (tagInput.value || '').trim();
+    const color = (colorInput.value || '#0d6efd').trim();
+    if (!tagName) return;
+    form.classList.add('loading');
+    fetch(`/customers/${customerId}/add-tag/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ tag: tagName, color })
+    }).then(r => r.json())
+      .then(data => {
+        if (!data.success) throw new Error(data.error || 'Failed to add tag');
+        appendTag(data.tag);
+        tagInput.value = '';
+        tagInput.focus();
+      }).catch(err => {
+        console.error(err);
+        showNotification(err.message || 'Failed to add tag', 'error');
+      }).finally(() => form.classList.remove('loading'));
+}
+
+function appendTag(tag) {
+    const container = document.getElementById('tag-container');
+    if (!container) return;
+    const placeholder = document.getElementById('no-tags-placeholder');
+    if (placeholder) placeholder.remove();
+    // Avoid duplicates
+    if (container.querySelector(`[data-tag-slug="${CSS.escape(tag.slug)}"]`)) return;
+    const span = document.createElement('span');
+    span.className = 'badge tag-badge rounded-pill me-1 mb-1';
+    span.dataset.tagSlug = tag.slug;
+    span.dataset.color = tag.color;
+    span.innerHTML = `
+        <span class="tag-label"></span>
+        <button type="button" class="tag-remove-btn ms-1" data-tag-slug="${tag.slug}">
+            <span aria-hidden="true">&times;</span>
+            <span class="visually-hidden">Remove tag ${escapeHtml(tag.name)}</span>
+        </button>`;
+    span.querySelector('.tag-label').textContent = tag.name;
+    container.appendChild(span);
+    applyTagColors();
+    bindRemoveTagHandlers(span.querySelector('.tag-remove-btn'));
+}
+
+function bindRemoveTagHandlers(scope) {
+    const buttons = scope ? [scope] : Array.from(document.querySelectorAll('#tag-container .tag-remove-btn'));
+    buttons.forEach(btn => {
+        if (btn._tagBound) return; // prevent duplicate binding
+        btn.addEventListener('click', handleRemoveTag, { once: false });
+        btn._tagBound = true;
+    });
+}
+
+function handleRemoveTag(e) {
+    const btn = e.currentTarget;
+    const slug = btn.getAttribute('data-tag-slug');
+    const customerId = document.getElementById('add-tag-form')?.getAttribute('data-customer-id');
+    if (!slug || !customerId) return;
+    btn.disabled = true;
+    fetch(`/customers/${customerId}/remove-tag/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ tag: slug })
+    }).then(r => r.json())
+      .then(data => {
+        if (!data.success) throw new Error(data.error || 'Failed to remove tag');
+        const badge = btn.closest('[data-tag-slug]');
+        if (badge) badge.remove();
+        if (!document.querySelector('#tag-container .tag-badge')) {
+            const placeholder = document.createElement('span');
+            placeholder.id = 'no-tags-placeholder';
+            placeholder.className = 'text-muted';
+            placeholder.textContent = 'No tags yet';
+            document.getElementById('tag-container').appendChild(placeholder);
+        }
+      }).catch(err => {
+        console.error(err);
+        showNotification(err.message || 'Failed to remove tag', 'error');
+      });
+}
+
+// ===================== NOTES MANAGEMENT ===================== //
+function initializeNotes() {
+    // Load initial notes
+    loadNotes();
+    
+    // Initialize add note form
+    const addNoteForm = document.getElementById('add-note-form');
+    if (addNoteForm) {
+        addNoteForm.addEventListener('submit', handleAddNoteSubmit);
+    }
+}
+
+function loadNotes(offset = 0) {
+    const customerId = document.getElementById('add-note-form')?.getAttribute('data-customer-id');
+    if (!customerId) return;
+    
+    const loadingEl = document.getElementById('notes-loading');
+    if (offset === 0) {
+        if (loadingEl) loadingEl.style.display = 'block';
+    }
+    
+    fetch(`/customers/${customerId}/notes/?offset=${offset}&limit=10`)
+        .then(response => response.json())
+        .then(data => {
+            if (loadingEl) loadingEl.style.display = 'none';
+            
+            if (data.success) {
+                if (offset === 0) {
+                    // Initial load - replace content
+                    displayNotes(data.notes);
+                } else {
+                    // Load more - append to existing
+                    appendNotes(data.notes);
+                }
+                
+                // Show/hide load more button
+                const loadMoreBtn = document.getElementById('load-more-notes');
+                if (loadMoreBtn) {
+                    loadMoreBtn.style.display = data.has_more ? 'block' : 'none';
+                }
+            } else {
+                showNotification('Failed to load notes', 'error');
+            }
+        })
+        .catch(error => {
+            if (loadingEl) loadingEl.style.display = 'none';
+            console.error('Error loading notes:', error);
+            showNotification('Failed to load notes', 'error');
+        });
+}
+
+function displayNotes(notes) {
+    const timeline = document.getElementById('notes-timeline');
+    if (!timeline) return;
+    
+    if (notes.length === 0) {
+        timeline.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-chat-left-text fs-1 mb-3"></i>
+                <p class="mb-0">No notes yet. Add the first note to start tracking interactions.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    timeline.innerHTML = '';
+    notes.forEach(note => {
+        appendNoteToTimeline(note);
+    });
+}
+
+function appendNotes(notes) {
+    notes.forEach(note => {
+        appendNoteToTimeline(note);
+    });
+}
+
+function appendNoteToTimeline(note) {
+    const timeline = document.getElementById('notes-timeline');
+    if (!timeline) return;
+    
+    const noteElement = document.createElement('div');
+    noteElement.className = 'note-item mb-3';
+    noteElement.innerHTML = `
+        <div class="note-card border rounded p-3 ${note.is_important ? 'border-warning' : ''}">
+            <div class="note-header d-flex justify-content-between align-items-start mb-2">
+                <div class="note-meta">
+                    <span class="note-type badge bg-${getNoteTypeColor(note.note_type)} me-2">
+                        <i class="bi bi-${getNoteTypeIcon(note.note_type)}"></i>
+                        ${escapeHtml(note.note_type_display)}
+                    </span>
+                    ${note.is_important ? '<span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i> Important</span>' : ''}
+                </div>
+                <small class="text-muted">
+                    ${escapeHtml(note.created_at)} by ${escapeHtml(note.created_by)}
+                </small>
+            </div>
+            <div class="note-content">
+                <p class="mb-0">${escapeHtml(note.note).replace(/\n/g, '<br>')}</p>
+            </div>
+        </div>
+    `;
+    
+    timeline.appendChild(noteElement);
+}
+
+function getNoteTypeColor(noteType) {
+    const colors = {
+        'general': 'secondary',
+        'call': 'success',
+        'meeting': 'primary',
+        'email': 'info',
+        'task': 'warning',
+        'other': 'dark'
+    };
+    return colors[noteType] || 'secondary';
+}
+
+function getNoteTypeIcon(noteType) {
+    const icons = {
+        'general': 'chat-left-text',
+        'call': 'telephone',
+        'meeting': 'people',
+        'email': 'envelope',
+        'task': 'check-square',
+        'other': 'gear'
+    };
+    return icons[noteType] || 'chat-left-text';
+}
+
+function handleAddNoteSubmit(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const customerId = form.getAttribute('data-customer-id');
+    const formData = new FormData(form);
+    
+    // Show loading state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise spinning"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    fetch(`/customers/${customerId}/add-note/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reset form
+            form.reset();
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addNoteModal'));
+            if (modal) modal.hide();
+            
+            // Add note to timeline (prepend to show at top)
+            prependNoteToTimeline(data.note);
+            
+            showNotification('Note added successfully', 'success');
+        } else {
+            showNotification(data.error || 'Failed to add note', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error adding note:', error);
+        showNotification('Failed to add note', 'error');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function prependNoteToTimeline(note) {
+    const timeline = document.getElementById('notes-timeline');
+    if (!timeline) return;
+    
+    // Remove "no notes" message if it exists
+    const noNotesMsg = timeline.querySelector('.text-center.text-muted');
+    if (noNotesMsg) {
+        noNotesMsg.remove();
+    }
+    
+    const noteElement = document.createElement('div');
+    noteElement.className = 'note-item mb-3';
+    noteElement.innerHTML = `
+        <div class="note-card border rounded p-3 ${note.is_important ? 'border-warning' : ''}">
+            <div class="note-header d-flex justify-content-between align-items-start mb-2">
+                <div class="note-meta">
+                    <span class="note-type badge bg-${getNoteTypeColor(note.note_type)} me-2">
+                        <i class="bi bi-${getNoteTypeIcon(note.note_type)}"></i>
+                        ${escapeHtml(note.note_type_display)}
+                    </span>
+                    ${note.is_important ? '<span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i> Important</span>' : ''}
+                </div>
+                <small class="text-muted">
+                    ${escapeHtml(note.created_at)} by ${escapeHtml(note.created_by)}
+                </small>
+            </div>
+            <div class="note-content">
+                <p class="mb-0">${escapeHtml(note.note).replace(/\n/g, '<br>')}</p>
+            </div>
+        </div>
+    `;
+    
+    timeline.insertBefore(noteElement, timeline.firstChild);
+}
+
+function loadMoreNotes() {
+    const timeline = document.getElementById('notes-timeline');
+    const currentNotes = timeline.querySelectorAll('.note-item').length;
+    loadNotes(currentNotes);
 }
 </script>
 {% endblock %}
