@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Task Automation Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+<style>
+.task-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: white;
+}
+
+.task-priority-high {
+    border-left: 4px solid #dc3545;
+}
+
+.task-priority-medium {
+    border-left: 4px solid #ffc107;
+}
+
+.task-priority-low {
+    border-left: 4px solid #28a745;
+}
+
+.task-priority-urgent {
+    border-left: 4px solid #6f42c1;
+}
+
+.workflow-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.overdue {
+    color: #dc3545;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Task Automation Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_tasks }}</div>
+                <div class="text-muted">Total Tasks</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ completed_tasks }}</div>
+                <div class="text-muted">Completed Tasks</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number overdue">{{ overdue_count }}</div>
+                <div class="text-muted">Overdue Tasks</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ completion_rate }}%</div>
+                <div class="text-muted">Completion Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ active_workflows }}</div>
+                <div class="text-muted">Active Workflows</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_executions }}</div>
+                <div class="text-muted">Total Executions</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ successful_executions }}</div>
+                <div class="text-muted">Successful Executions</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ success_rate }}%</div>
+                <div class="text-muted">Success Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- My Assigned Tasks -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">My Assigned Tasks</h5>
+                    <a href="#" class="btn btn-sm btn-primary">Create Task</a>
+                </div>
+                <div class="card-body">
+                    {% for task in assigned_tasks %}
+                    <div class="task-card task-priority-{{ task.priority }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ task.title }}</h6>
+                                <p class="text-muted small mb-1">{{ task.customer.first_name }} {{ task.customer.last_name }}</p>
+                                {% if task.due_date %}
+                                <small class="text-muted">Due: {{ task.due_date|date:"M d, Y H:i" }}</small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                <span class="badge badge-secondary">{{ task.get_status_display }}</span>
+                            </div>
+                        </div>
+                        {% if task.description %}
+                        <p class="small text-muted mt-2">{{ task.description|truncatewords:15 }}</p>
+                        {% endif %}
+                        <div class="mt-2">
+                            {% if task.status != 'completed' %}
+                            <button class="btn btn-sm btn-success" onclick="completeTask({{ task.id }})">Complete</button>
+                            {% endif %}
+                            <a href="#" class="btn btn-sm btn-outline-primary">View</a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No assigned tasks.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Workflow Executions -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Workflow Executions</h5>
+                    <a href="#" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% for execution in recent_executions %}
+                    <div class="workflow-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ execution.workflow.name }}</h6>
+                                <p class="text-muted small mb-1">{{ execution.customer.first_name }} {{ execution.customer.last_name }}</p>
+                                <small class="text-muted">Started: {{ execution.started_at|date:"M d, Y H:i" }}</small>
+                            </div>
+                            <div>
+                                {% if execution.status == 'completed' %}
+                                <span class="badge badge-success">{{ execution.get_status_display }}</span>
+                                {% elif execution.status == 'failed' %}
+                                <span class="badge badge-danger">{{ execution.get_status_display }}</span>
+                                {% elif execution.status == 'running' %}
+                                <span class="badge badge-info">{{ execution.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ execution.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No recent workflow executions.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overdue and Upcoming Tasks -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0 text-danger">Overdue Tasks</h5>
+                </div>
+                <div class="card-body">
+                    {% for task in overdue_tasks %}
+                    <div class="task-card task-priority-{{ task.priority }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ task.title }}</h6>
+                                <p class="text-muted small mb-1">{{ task.customer.first_name }} {{ task.customer.last_name }}</p>
+                                <small class="text-danger">Due: {{ task.due_date|date:"M d, Y H:i" }}</small>
+                            </div>
+                            <div>
+                                <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-success">No overdue tasks!</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0 text-warning">Upcoming Tasks</h5>
+                </div>
+                <div class="card-body">
+                    {% for task in upcoming_tasks %}
+                    <div class="task-card task-priority-{{ task.priority }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ task.title }}</h6>
+                                <p class="text-muted small mb-1">{{ task.customer.first_name }} {{ task.customer.last_name }}</p>
+                                <small class="text-warning">Due: {{ task.due_date|date:"M d, Y H:i" }}</small>
+                            </div>
+                            <div>
+                                <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No upcoming tasks.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function completeTask(taskId) {
+    if (confirm('Mark this task as completed?')) {
+        fetch('{% url "analytics:task_status_update" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `task_id=${taskId}&status=completed`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+}
+</script>
+{% endblock %}

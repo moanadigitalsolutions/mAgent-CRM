@@ -1,0 +1,14 @@
+
+QUOTE #6
+
+Customer: Emma Davis
+Email: emma.davis@email.com
+Mobile: 0291234570
+
+Description: Server crashed and we need immediate assistance to recover data and get systems back online.
+Estimated Cost: $500.00
+Status: Received
+Created: August 25, 2025
+
+Notes:
+No additional notes

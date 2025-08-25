@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quote Requests{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quote-card {
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s ease;
+    }
+    .quote-card:hover {
+        transform: translateX(5px);
+    }
+    .quote-card.urgent {
+        border-left-color: #dc3545;
+    }
+    .quote-card.high {
+        border-left-color: #ffc107;
+    }
+    .status-badge {
+        font-size: 0.8rem;
+    }
+    .filter-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-file-text"></i> Quote Requests</h1>
+                <div class="btn-group">
+                    <a href="{% url 'analytics:quote_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> New Quote Request
+                    </a>
+                    <a href="{% url 'analytics:process_email' %}" class="btn btn-info">
+                        <i class="bi bi-envelope-plus"></i> Process Email
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row">
+        <div class="col-12">
+            <div class="filter-card">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-2">
+                        {{ filter_form.status.label_tag }}
+                        {{ filter_form.status }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ filter_form.priority.label_tag }}
+                        {{ filter_form.priority }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ filter_form.service_type.label_tag }}
+                        {{ filter_form.service_type }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ filter_form.assigned_to.label_tag }}
+                        {{ filter_form.assigned_to }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Search</label>
+                        <input type="text" name="search" value="{{ search_query }}" 
+                               class="form-control" placeholder="Search quotes...">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search"></i> Filter
+                        </button>
+                        <a href="{% url 'analytics:quote_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted">
+                    Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }} quote requests
+                </span>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="toggleView('card')">
+                        <i class="bi bi-card-list"></i> Cards
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="toggleView('table')">
+                        <i class="bi bi-table"></i> Table
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quote Cards View -->
+    <div id="cardView" class="row">
+        {% for quote in page_obj %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card quote-card h-100 {% if quote.priority == 'urgent' %}urgent{% elif quote.priority == 'high' %}high{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>{{ quote.reference_number }}</strong>
+                    <span class="badge bg-{% if quote.status == 'received' %}primary{% elif quote.status == 'reviewing' %}warning{% elif quote.status == 'quoted' %}info{% elif quote.status == 'accepted' %}success{% elif quote.status == 'declined' %}danger{% else %}secondary{% endif %} status-badge">
+                        {{ quote.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">{{ quote.title|truncatechars:60 }}</h6>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ quote.customer.full_name }}<br>
+                            <i class="bi bi-envelope"></i> {{ quote.customer.email }}<br>
+                            <i class="bi bi-tag"></i> {{ quote.get_service_type_display }}<br>
+                            <i class="bi bi-flag"></i> {{ quote.get_priority_display }}
+                        </small>
+                    </p>
+                    {% if quote.final_quote_amount %}
+                    <p class="card-text">
+                        <strong>${{ quote.final_quote_amount }}</strong>
+                    </p>
+                    {% endif %}
+                    <p class="card-text">
+                        <small class="text-muted">
+                            {{ quote.requested_date|timesince }} ago
+                            {% if quote.assigned_to %}
+                            • Assigned to {{ quote.assigned_to.get_full_name|default:quote.assigned_to.username }}
+                            {% endif %}
+                        </small>
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100">
+                        <a href="{% url 'analytics:quote_detail' quote.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        {% if quote.status == 'received' or quote.status == 'reviewing' %}
+                        <a href="{% url 'analytics:quote_respond' quote.pk %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-reply"></i> Respond
+                        </a>
+                        {% endif %}
+                        {% if quote.status == 'accepted' %}
+                        <a href="{% url 'analytics:quote_convert_to_job' quote.pk %}" class="btn btn-sm btn-success">
+                            <i class="bi bi-arrow-right"></i> Create Job
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                <h4 class="text-muted mt-3">No quote requests found</h4>
+                <p class="text-muted">Try adjusting your filters or create a new quote request.</p>
+                <a href="{% url 'analytics:quote_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create Quote Request
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Table View -->
+    <div id="tableView" class="row" style="display: none;">
+        <div class="col-12">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Reference</th>
+                            <th>Customer</th>
+                            <th>Title</th>
+                            <th>Service Type</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for quote in page_obj %}
+                        <tr>
+                            <td>
+                                <strong>{{ quote.reference_number }}</strong>
+                            </td>
+                            <td>
+                                {{ quote.customer.full_name }}<br>
+                                <small class="text-muted">{{ quote.customer.email }}</small>
+                            </td>
+                            <td>{{ quote.title|truncatechars:40 }}</td>
+                            <td>{{ quote.get_service_type_display }}</td>
+                            <td>
+                                <span class="badge bg-{% if quote.priority == 'urgent' %}danger{% elif quote.priority == 'high' %}warning{% elif quote.priority == 'medium' %}info{% else %}secondary{% endif %}">
+                                    {{ quote.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if quote.status == 'received' %}primary{% elif quote.status == 'reviewing' %}warning{% elif quote.status == 'quoted' %}info{% elif quote.status == 'accepted' %}success{% elif quote.status == 'declined' %}danger{% else %}secondary{% endif %}">
+                                    {{ quote.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if quote.final_quote_amount %}
+                                    ${{ quote.final_quote_amount }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ quote.requested_date|date:"M d, Y" }}<br>
+                                <small class="text-muted">{{ quote.requested_date|timesince }} ago</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'analytics:quote_detail' quote.pk %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if quote.status == 'received' or quote.status == 'reviewing' %}
+                                    <a href="{% url 'analytics:quote_respond' quote.pk %}" class="btn btn-primary">
+                                        <i class="bi bi-reply"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <i class="bi bi-inbox" style="font-size: 2rem; color: #ccc;"></i>
+                                <p class="text-muted mt-2 mb-0">No quote requests found</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="Quote pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleView(viewType) {
+        const cardView = document.getElementById('cardView');
+        const tableView = document.getElementById('tableView');
+        
+        if (viewType === 'card') {
+            cardView.style.display = 'flex';
+            tableView.style.display = 'none';
+        } else {
+            cardView.style.display = 'none';
+            tableView.style.display = 'block';
+        }
+        
+        // Update button states
+        document.querySelectorAll('.btn-group button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Job #{{ job.job_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .job-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    .detail-card {
+        border: none;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .progress-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .progress-bar-custom {
+        height: 25px;
+        border-radius: 12px;
+        font-weight: bold;
+    }
+    .timeline-item {
+        border-left: 3px solid #dee2e6;
+        padding-left: 20px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 5px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #6c757d;
+    }
+    .timeline-item.status-pending:before { background: #ffc107; }
+    .timeline-item.status-in_progress:before { background: #17a2b8; }
+    .timeline-item.status-completed:before { background: #28a745; }
+    .timeline-item.status-on_hold:before { background: #6c757d; }
+    .timeline-item.status-cancelled:before { background: #dc3545; }
+    .update-item {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    .overdue-warning {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Job Header -->
+    <div class="job-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="bi bi-briefcase"></i> Job #{{ job.job_number }}</h1>
+                <p class="mb-0 opacity-75">{{ job.title }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="badge bg-{% if job.status == 'pending' %}warning{% elif job.status == 'in_progress' %}primary{% elif job.status == 'completed' %}success{% elif job.status == 'on_hold' %}secondary{% elif job.status == 'cancelled' %}danger{% else %}info{% endif %} fs-6 mb-2">
+                    {{ job.get_status_display }}
+                </span>
+                {% if job.priority == 'urgent' or job.priority == 'high' %}
+                <div>
+                    <span class="badge bg-{% if job.priority == 'urgent' %}danger{% else %}warning{% endif %} fs-6">
+                        <i class="bi bi-flag"></i> {{ job.get_priority_display }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="btn-group me-3">
+                <a href="{% url 'analytics:job_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Jobs
+                </a>
+                <a href="{% url 'analytics:quote_job_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </div>
+            
+            {% if job.status != 'completed' and job.status != 'cancelled' %}
+            <div class="btn-group me-3">
+                <a href="{% url 'analytics:job_update_status' job.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil"></i> Update Status
+                </a>
+                <a href="{% url 'analytics:job_add_update' job.pk %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Add Progress
+                </a>
+                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addTimeModal">
+                    <i class="bi bi-clock"></i> Log Time
+                </button>
+            </div>
+            {% endif %}
+
+            {% if job.status == 'completed' %}
+            <div class="btn-group me-3">
+                <a href="{% url 'analytics:job_generate_invoice' job.pk %}" class="btn btn-warning">
+                    <i class="bi bi-receipt"></i> Generate Invoice
+                </a>
+                <a href="{% url 'analytics:job_completion_report' job.pk %}" class="btn btn-info">
+                    <i class="bi bi-file-text"></i> Completion Report
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="btn-group">
+                <a href="{% url 'analytics:job_pdf' job.pk %}" class="btn btn-outline-danger" target="_blank">
+                    <i class="bi bi-file-pdf"></i> Export PDF
+                </a>
+                <button class="btn btn-outline-info" onclick="printJob()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overdue Warning -->
+    {% if job.is_overdue %}
+    <div class="row">
+        <div class="col-12">
+            <div class="overdue-warning">
+                <h6><i class="bi bi-exclamation-triangle"></i> Job Overdue</h6>
+                <p class="mb-0">
+                    This job was due on {{ job.due_date|date:"M d, Y" }} ({{ job.due_date|timesince }} ago).
+                    Please update the status or extend the deadline.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Progress Section -->
+    {% if job.status != 'completed' and job.status != 'cancelled' %}
+    <div class="row">
+        <div class="col-12">
+            <div class="progress-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5><i class="bi bi-graph-up"></i> Progress</h5>
+                    <span class="badge bg-{% if job.progress_percentage < 25 %}danger{% elif job.progress_percentage < 75 %}warning{% else %}success{% endif %} fs-6">
+                        {{ job.progress_percentage|floatformat:0 }}% Complete
+                    </span>
+                </div>
+                <div class="progress progress-bar-custom mb-3">
+                    <div class="progress-bar bg-{% if job.progress_percentage < 25 %}danger{% elif job.progress_percentage < 75 %}warning{% else %}success{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ job.progress_percentage }}%"
+                         title="Job Progress">
+                        {{ job.progress_percentage|floatformat:0 }}%
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="text-muted">Started</div>
+                        <strong>{{ job.start_date|date:"M d" }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted">Due Date</div>
+                        <strong class="{% if job.is_overdue %}text-danger{% endif %}">
+                            {{ job.due_date|date:"M d" }}
+                        </strong>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted">Days Remaining</div>
+                        <strong class="{% if job.is_overdue %}text-danger{% endif %}">
+                            {% if job.is_overdue %}
+                            {{ job.due_date|timesince }} overdue
+                            {% else %}
+                            {{ job.due_date|timeuntil }}
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted">Time Logged</div>
+                        <strong>{{ job.total_time_logged|default:"0" }} hours</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Main Job Details -->
+        <div class="col-lg-8">
+            <!-- Customer Information -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-person"></i> Customer Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Name:</strong> {{ job.customer.full_name }}</p>
+                                <p><strong>Email:</strong> 
+                                   <a href="mailto:{{ job.customer.email }}">{{ job.customer.email }}</a>
+                                </p>
+                                <p><strong>Phone:</strong> 
+                                   {% if job.customer.phone %}
+                                   <a href="tel:{{ job.customer.phone }}">{{ job.customer.phone }}</a>
+                                   {% else %}
+                                   <span class="text-muted">Not provided</span>
+                                   {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                {% if job.customer.company %}
+                                <p><strong>Company:</strong> {{ job.customer.company }}</p>
+                                {% endif %}
+                                {% if job.location %}
+                                <p><strong>Job Location:</strong> {{ job.location }}</p>
+                                {% endif %}
+                                <p><strong>Customer Since:</strong> {{ job.customer.created_at|date:"M d, Y" }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'customers:customer_detail' job.customer.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View Customer Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job Details -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-briefcase"></i> Job Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Service Type:</strong> {{ job.get_service_type_display }}</p>
+                                <p><strong>Priority:</strong> 
+                                   <span class="badge bg-{% if job.priority == 'urgent' %}danger{% elif job.priority == 'high' %}warning{% else %}success{% endif %}">
+                                       {{ job.get_priority_display }}
+                                   </span>
+                                </p>
+                                <p><strong>Created:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
+                                {% if job.assigned_to %}
+                                <p><strong>Assigned To:</strong> {{ job.assigned_to.get_full_name|default:job.assigned_to.username }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if job.start_date %}
+                                <p><strong>Start Date:</strong> {{ job.start_date|date:"M d, Y" }}</p>
+                                {% endif %}
+                                {% if job.due_date %}
+                                <p><strong>Due Date:</strong> {{ job.due_date|date:"M d, Y" }}</p>
+                                {% endif %}
+                                {% if job.completion_date %}
+                                <p><strong>Completed:</strong> {{ job.completion_date|date:"M d, Y" }}</p>
+                                {% endif %}
+                                {% if job.quoted_amount %}
+                                <p><strong>Quoted Amount:</strong> ${{ job.quoted_amount }}</p>
+                                {% endif %}
+                                {% if job.final_amount %}
+                                <p><strong>Final Amount:</strong> ${{ job.final_amount }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if job.description %}
+                        <div class="mt-3">
+                            <strong>Description:</strong>
+                            <div class="mt-2 p-3 bg-light rounded">
+                                {{ job.description|linebreaks }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if job.special_requirements %}
+                        <div class="mt-3">
+                            <strong>Special Requirements:</strong>
+                            <div class="mt-2 p-3 bg-light rounded">
+                                {{ job.special_requirements|linebreaks }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job Updates -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-list-ul"></i> Job Updates</h5>
+                        {% if job.status != 'completed' and job.status != 'cancelled' %}
+                        <a href="{% url 'analytics:job_add_update' job.pk %}" class="btn btn-sm btn-success">
+                            <i class="bi bi-plus"></i> Add Update
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if job.updates.exists %}
+                        {% for update in job.updates.all %}
+                        <div class="update-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6>{{ update.title }}</h6>
+                                    <p class="mb-1">{{ update.description|linebreaks }}</p>
+                                    <small class="text-muted">
+                                        <i class="bi bi-person"></i> {{ update.created_by.get_full_name|default:update.created_by.username }}
+                                        <i class="bi bi-clock ms-3"></i> {{ update.created_at|date:"M d, Y g:i A" }}
+                                        {% if update.time_logged %}
+                                        <i class="bi bi-stopwatch ms-3"></i> {{ update.time_logged }} hours logged
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% if update.status_change %}
+                                <span class="badge bg-info">
+                                    Status: {{ update.get_status_change_display }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-chat-dots" style="font-size: 2rem; color: #ccc;"></i>
+                            <p class="text-muted mt-2">No updates yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files and Attachments -->
+            {% if job.attachments.exists %}
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-paperclip"></i> Attachments</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for attachment in job.attachments.all %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-file-earmark fs-3 text-primary"></i>
+                                        <h6 class="card-title mt-2">{{ attachment.filename|truncatechars:20 }}</h6>
+                                        <p class="card-text">
+                                            <small class="text-muted">{{ attachment.file_size|filesizeformat }}</small>
+                                        </p>
+                                        <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="bi bi-lightning"></i> Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if job.status == 'pending' %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'analytics:job_start' job.pk %}" class="btn btn-success">
+                                <i class="bi bi-play-circle"></i> Start Job
+                            </a>
+                            <a href="{% url 'analytics:job_update_status' job.pk %}" class="btn btn-primary">
+                                <i class="bi bi-pencil"></i> Update Details
+                            </a>
+                        </div>
+                        {% elif job.status == 'in_progress' %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'analytics:job_add_update' job.pk %}" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Add Progress
+                            </a>
+                            <a href="{% url 'analytics:job_complete' job.pk %}" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Mark Complete
+                            </a>
+                            <a href="{% url 'analytics:job_hold' job.pk %}" class="btn btn-warning">
+                                <i class="bi bi-pause-circle"></i> Put on Hold
+                            </a>
+                        </div>
+                        {% elif job.status == 'completed' %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'analytics:job_generate_invoice' job.pk %}" class="btn btn-success">
+                                <i class="bi bi-receipt"></i> Generate Invoice
+                            </a>
+                            <a href="{% url 'analytics:job_completion_report' job.pk %}" class="btn btn-info">
+                                <i class="bi bi-file-text"></i> Completion Report
+                            </a>
+                        </div>
+                        {% elif job.status == 'on_hold' %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'analytics:job_resume' job.pk %}" class="btn btn-success">
+                                <i class="bi bi-play-circle"></i> Resume Job
+                            </a>
+                            <a href="{% url 'analytics:job_cancel' job.pk %}" class="btn btn-danger">
+                                <i class="bi bi-x-circle"></i> Cancel Job
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="bi bi-clock-history"></i> Timeline</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline-item status-{{ job.status }}">
+                            <strong>Job {{ job.get_status_display }}</strong>
+                            <div class="text-muted">{{ job.updated_at|date:"M d, Y g:i A" }}</div>
+                        </div>
+                        
+                        {% if job.start_date and job.status != 'pending' %}
+                        <div class="timeline-item status-in_progress">
+                            <strong>Job Started</strong>
+                            <div class="text-muted">{{ job.start_date|date:"M d, Y" }}</div>
+                        </div>
+                        {% endif %}
+
+                        <div class="timeline-item">
+                            <strong>Job Created</strong>
+                            <div class="text-muted">{{ job.created_at|date:"M d, Y g:i A" }}</div>
+                        </div>
+
+                        <!-- Additional timeline entries from job updates -->
+                        {% for update in job.updates.all|slice:":5" %}
+                        <div class="timeline-item">
+                            <strong>{{ update.title }}</strong>
+                            <div class="text-muted">{{ update.created_at|date:"M d, Y g:i A" }}</div>
+                            {% if update.description %}
+                            <div class="mt-1">{{ update.description|truncatechars:100 }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Information -->
+            {% if related_quote or related_jobs %}
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="bi bi-link"></i> Related Items</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if related_quote %}
+                        <h6>Original Quote</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <a href="{% url 'analytics:quote_detail' related_quote.pk %}" class="text-decoration-none">
+                                Quote #{{ related_quote.quote_number }}
+                            </a>
+                            <span class="badge bg-{% if related_quote.status == 'approved' %}success{% else %}warning{% endif %}">
+                                {{ related_quote.get_status_display }}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        {% if related_jobs %}
+                        <h6>Related Jobs</h6>
+                        {% for related_job in related_jobs %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <a href="{% url 'analytics:job_detail' related_job.pk %}" class="text-decoration-none">
+                                Job #{{ related_job.job_number }}
+                            </a>
+                            <span class="badge bg-{% if related_job.status == 'completed' %}success{% elif related_job.status == 'in_progress' %}primary{% else %}warning{% endif %}">
+                                {{ related_job.get_status_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Time Modal -->
+<div class="modal fade" id="addTimeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Log Time</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{% url 'analytics:job_log_time' job.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Hours</label>
+                        <input type="number" class="form-control" name="hours" step="0.5" min="0" max="24" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3" placeholder="What did you work on?"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-control" name="date" value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Log Time</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function printJob() {
+    window.print();
+}
+
+// Handle time logging form submission
+document.getElementById('addTimeModal').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this.querySelector('form');
+    form.submit();
+});
+</script>
+{% endblock %}

@@ -15,6 +15,23 @@ from datetime import datetime
 from .models import Customer, CustomField, CustomerCustomFieldValue, CustomerFile, Tag, CustomerNote
 from .forms import CustomerForm, CustomFieldForm, CustomerFileForm
 
+# Analytics tracking
+try:
+    from analytics.utils import track_event
+    from analytics.email_automation import (
+        trigger_sequence_on_customer_created,
+        trigger_sequence_on_note_added
+    )
+except ImportError:
+    def track_event(customer, event_type, user=None, metadata=None):
+        pass  # Fallback if analytics not available
+    
+    def trigger_sequence_on_customer_created(customer, created_by):
+        pass  # Fallback if email automation not available
+    
+    def trigger_sequence_on_note_added(customer, added_by):
+        pass  # Fallback if email automation not available
+
 
 @method_decorator(login_required, name='dispatch')
 class CustomerListView(View):
@@ -97,6 +114,10 @@ class CustomerListView(View):
 def customer_detail(request, pk):
     """Customer detail view with custom fields and files"""
     customer = get_object_or_404(Customer, pk=pk)
+    
+    # Track analytics event for customer view
+    track_event(customer, 'viewed', request.user)
+    
     custom_fields = CustomField.objects.filter(is_active=True)
     
     # Get custom field values for this customer
@@ -144,6 +165,16 @@ def customer_create(request):
             if request.user.is_authenticated:
                 customer.created_by = request.user
             customer.save()
+            
+            # Track analytics event for customer creation
+            track_event(customer, 'created', request.user)
+            
+            # Trigger email automation sequences for new customers
+            try:
+                trigger_sequence_on_customer_created(customer, request.user)
+            except Exception as e:
+                # Log error but don't prevent customer creation
+                print(f"Error triggering email sequences for new customer: {e}")
             
             # Handle custom fields
             for field in custom_fields:
@@ -507,6 +538,20 @@ def add_customer_note(request, pk):
         is_important=is_important,
         created_by=request.user
     )
+    
+    # Track analytics event for note addition
+    track_event(customer, 'note_added', request.user, {
+        'note_type': note_type,
+        'is_important': is_important,
+        'note_length': len(note_content)
+    })
+    
+    # Trigger email automation sequences for note added
+    try:
+        trigger_sequence_on_note_added(customer, request.user)
+    except Exception as e:
+        # Log error but don't prevent note creation
+        print(f"Error triggering email sequences for note added: {e}")
     
     return JsonResponse({
         'success': True,

@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lead Scoring Dashboard{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0"><i class="fas fa-bullseye text-primary"></i> Lead Scoring Dashboard</h1>
+                    <p class="text-muted">Monitor and analyze customer lead scores</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <a href="{% url 'analytics:customer_scores_list' %}" class="btn btn-primary">
+                        <i class="fas fa-users"></i> View All Scores
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overview Stats -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-users text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="fs-2 fw-bold text-dark">{{ total_customers }}</div>
+                            <div class="text-muted">Total Customers</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-star text-success fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="fs-2 fw-bold text-dark">{{ high_score_customers }}</div>
+                            <div class="text-muted">High Score (80+)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-chart-line text-warning fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="fs-2 fw-bold text-dark">{{ average_score|floatformat:1 }}</div>
+                            <div class="text-muted">Average Score</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-cog text-info fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="fs-2 fw-bold text-dark">{{ active_rules }}</div>
+                            <div class="text-muted">Active Rules</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Score Distribution Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar text-primary"></i> Score Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="scoreDistributionChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Customers -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="mb-0"><i class="fas fa-trophy text-warning"></i> Top Customers</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_customers %}
+                        {% for customer in top_customers %}
+                        <div class="d-flex align-items-center mb-3{% if not forloop.last %} pb-3 border-bottom{% endif %}">
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-user text-primary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="fw-bold">{{ customer.first_name }} {{ customer.last_name }}</div>
+                                <div class="text-muted small">{{ customer.email }}</div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="badge bg-success fs-6">{{ customer.score|floatformat:0 }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-users text-muted fs-1 mb-3"></i>
+                            <p class="text-muted">No scored customers yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Recent Scoring Activity -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="mb-0"><i class="fas fa-clock text-info"></i> Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_scores %}
+                        {% for score in recent_scores %}
+                        <div class="d-flex align-items-center mb-3{% if not forloop.last %} pb-3 border-bottom{% endif %}">
+                            <div class="flex-shrink-0">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-chart-line text-info"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="fw-bold">{{ score.customer.first_name }} {{ score.customer.last_name }}</div>
+                                <div class="text-muted small">Score updated {{ score.updated_at|timesince }} ago</div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="badge {% if score.score >= 80 %}bg-success{% elif score.score >= 60 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ score.score|floatformat:0 }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-history text-muted fs-1 mb-3"></i>
+                            <p class="text-muted">No recent scoring activity.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Scoring Rules -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-cogs text-secondary"></i> Scoring Rules</h5>
+                        <a href="#" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Add Rule
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if scoring_rules %}
+                        {% for rule in scoring_rules %}
+                        <div class="d-flex align-items-center mb-3{% if not forloop.last %} pb-3 border-bottom{% endif %}">
+                            <div class="flex-shrink-0">
+                                <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-rule text-secondary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="fw-bold">{{ rule.name }}</div>
+                                <div class="text-muted small">{{ rule.description|truncatechars:50 }}</div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="badge bg-{% if rule.is_active %}success{% else %}secondary{% endif %}">
+                                    {% if rule.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-cogs text-muted fs-1 mb-3"></i>
+                            <p class="text-muted">No scoring rules configured.</p>
+                            <a href="#" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Create First Rule
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Score Distribution Chart
+const ctx = document.getElementById('scoreDistributionChart').getContext('2d');
+const scoreDistributionChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['0-20', '21-40', '41-60', '61-80', '81-100'],
+        datasets: [{
+            label: 'Number of Customers',
+            data: {{ score_distribution|safe }},
+            backgroundColor: [
+                'rgba(220, 53, 69, 0.8)',   // Red for 0-20
+                'rgba(255, 193, 7, 0.8)',   // Yellow for 21-40
+                'rgba(13, 202, 240, 0.8)',  // Cyan for 41-60
+                'rgba(25, 135, 84, 0.8)',   // Green for 61-80
+                'rgba(102, 16, 242, 0.8)'   // Purple for 81-100
+            ],
+            borderColor: [
+                'rgba(220, 53, 69, 1)',
+                'rgba(255, 193, 7, 1)',
+                'rgba(13, 202, 240, 1)',
+                'rgba(25, 135, 84, 1)',
+                'rgba(102, 16, 242, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.y + ' customers';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

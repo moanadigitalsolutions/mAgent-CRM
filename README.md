@@ -239,17 +239,30 @@ For support and questions:
 - Check the Django admin panel for data management
 - Use the browser developer tools for troubleshooting
 
-## 🔄 Future Enhancements
+## 🔄 Development Roadmap
 
-Potential improvements for future versions:
-- **Email Integration**: Customer communication tracking
-- **Reporting Dashboard**: Analytics and business intelligence
-- **API Endpoints**: REST API for integrations
-- **Import/Export**: CSV/Excel data import and export
-- **Multi-user Support**: User roles and permissions
-- **Backup System**: Automated database backups
-- **Advanced Search**: Full-text search with filters
-- **Calendar Integration**: Appointment and task management
+### 📋 **Tier 1: COMPLETE** ✅
+- **Notes & Timeline System** - Interactive customer communication tracking
+- **Duplicate Detection** - Intelligent duplicate customer identification
+- **CSV Import/Export** - Robust data import and export capabilities
+- **Real-time Validation** - Inline form validation with instant feedback
+- **Comprehensive Testing** - 97% test coverage with quality assurance
+
+### 🚀 **Tier 2: IN PLANNING** 📋
+Advanced analytics and automation features - See `TIER_2_DEVELOPMENT_PLAN.md` for detailed specifications:
+
+- **Analytics Dashboard**: Customer insights, trends, and business intelligence
+- **Advanced Reporting**: Custom report builder with scheduled delivery
+- **Email Automation**: Automated sequences and customer communication
+- **Workflow Automation**: Task management and process automation
+- **Lead Scoring**: Intelligent lead qualification and prioritization
+- **API Integration**: REST API and third-party service connections
+
+### 🔮 **Future Tiers: ROADMAP**
+- **Multi-tenant Support**: Enterprise-level organization management
+- **Mobile Application**: Native iOS/Android apps
+- **Advanced Integrations**: ERP, accounting, and business system connections
+- **AI/ML Features**: Predictive analytics and intelligent recommendations
 
 ## 📋 Changelog
 

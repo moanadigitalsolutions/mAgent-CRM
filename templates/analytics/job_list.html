@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Jobs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .job-card {
+        border-left: 4px solid #28a745;
+        transition: transform 0.2s ease;
+    }
+    .job-card:hover {
+        transform: translateX(5px);
+    }
+    .job-card.urgent {
+        border-left-color: #dc3545;
+    }
+    .job-card.high {
+        border-left-color: #ffc107;
+    }
+    .job-card.overdue {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+    }
+    .filter-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-briefcase"></i> Jobs</h1>
+                <div class="btn-group">
+                    <a href="{% url 'analytics:job_create' %}" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> New Job
+                    </a>
+                    <a href="{% url 'analytics:quote_list' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-file-text"></i> View Quotes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row">
+        <div class="col-12">
+            <div class="filter-card">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-2">
+                        {{ filter_form.status.label_tag }}
+                        {{ filter_form.status }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ filter_form.priority.label_tag }}
+                        {{ filter_form.priority }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ filter_form.service_type.label_tag }}
+                        {{ filter_form.service_type }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ filter_form.assigned_to.label_tag }}
+                        {{ filter_form.assigned_to }}
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Overdue Only</label>
+                        <div class="form-check mt-2">
+                            {{ filter_form.overdue_only }}
+                            <label class="form-check-label" for="{{ filter_form.overdue_only.id_for_label }}">
+                                Show overdue
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Search</label>
+                        <input type="text" name="search" value="{{ search_query }}" 
+                               class="form-control" placeholder="Search jobs...">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <a href="{% url 'analytics:job_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted">
+                    Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }} jobs
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job Cards -->
+    <div class="row">
+        {% for job in page_obj %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card job-card h-100 {% if job.priority == 'urgent' %}urgent{% elif job.priority == 'high' %}high{% endif %} {% if job.is_overdue %}overdue{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>{{ job.job_number }}</strong>
+                    <div>
+                        {% if job.is_overdue %}
+                        <span class="badge bg-danger me-1">
+                            <i class="bi bi-exclamation-triangle"></i> Overdue
+                        </span>
+                        {% endif %}
+                        <span class="badge bg-{% if job.status == 'pending' %}warning{% elif job.status == 'in_progress' %}primary{% elif job.status == 'completed' %}success{% elif job.status == 'on_hold' %}secondary{% elif job.status == 'cancelled' %}danger{% else %}info{% endif %}">
+                            {{ job.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">{{ job.title|truncatechars:60 }}</h6>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ job.customer.full_name }}<br>
+                            <i class="bi bi-envelope"></i> {{ job.customer.email }}<br>
+                            <i class="bi bi-tag"></i> {{ job.get_service_type_display }}<br>
+                            <i class="bi bi-flag"></i> {{ job.get_priority_display }}
+                        </small>
+                    </p>
+                    
+                    <!-- Progress Bar -->
+                    {% if job.status != 'completed' and job.status != 'cancelled' %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Progress</small>
+                            <small class="text-muted">{{ job.progress_percentage|floatformat:0 }}%</small>
+                        </div>
+                        <div class="progress progress-bar-custom">
+                            <div class="progress-bar bg-{% if job.progress_percentage < 25 %}danger{% elif job.progress_percentage < 75 %}warning{% else %}success{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ job.progress_percentage }}%">
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if job.quoted_amount %}
+                    <p class="card-text">
+                        <strong>${{ job.quoted_amount }}</strong>
+                        {% if job.final_amount and job.final_amount != job.quoted_amount %}
+                        → <strong class="text-success">${{ job.final_amount }}</strong>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                    
+                    <p class="card-text">
+                        <small class="text-muted">
+                            {% if job.start_date %}
+                            Started: {{ job.start_date|date:"M d, Y" }}<br>
+                            {% endif %}
+                            {% if job.due_date %}
+                            Due: {{ job.due_date|date:"M d, Y" }}
+                            {% if job.is_overdue %}
+                            <span class="text-danger">({{ job.due_date|timesince }} overdue)</span>
+                            {% else %}
+                            ({{ job.due_date|timeuntil }} remaining)
+                            {% endif %}
+                            <br>
+                            {% endif %}
+                            {% if job.assigned_to %}
+                            Assigned to: {{ job.assigned_to.get_full_name|default:job.assigned_to.username }}
+                            {% endif %}
+                        </small>
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100">
+                        <a href="{% url 'analytics:job_detail' job.pk %}" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        {% if job.status != 'completed' and job.status != 'cancelled' %}
+                        <a href="{% url 'analytics:job_update_status' job.pk %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-pencil"></i> Update
+                        </a>
+                        <a href="{% url 'analytics:job_add_update' job.pk %}" class="btn btn-sm btn-info">
+                            <i class="bi bi-plus"></i> Progress
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-briefcase" style="font-size: 3rem; color: #ccc;"></i>
+                <h4 class="text-muted mt-3">No jobs found</h4>
+                <p class="text-muted">Try adjusting your filters or create a new job.</p>
+                <a href="{% url 'analytics:job_create' %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Create Job
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="Job pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+
+{% block title %}Customer Scores - Lead Scoring{% endblock %}
+
+{% block extra_css %}
+<style>
+    .score-badge {
+        font-size: 1.1em;
+        font-weight: bold;
+        min-width: 60px;
+        text-align: center;
+    }
+    .score-high { background-color: #28a745; color: white; }
+    .score-medium { background-color: #ffc107; color: black; }
+    .score-low { background-color: #dc3545; color: white; }
+    .score-none { background-color: #6c757d; color: white; }
+    
+    .customer-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .filters-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .score-distribution {
+        height: 200px;
+    }
+    
+    .btn-recalculate {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0"><i class="fas fa-users text-primary"></i> Customer Scores</h1>
+                    <p class="text-muted">View and manage customer lead scores</p>
+                </div>
+                <div>
+                    <a href="{% url 'analytics:lead_scoring_dashboard' %}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                    <button class="btn btn-success" onclick="bulkRecalculate()">
+                        <i class="fas fa-calculator"></i> Recalculate All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Summary -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card filters-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-filter"></i> Filters & Search
+                    </h5>
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" name="search" 
+                                   placeholder="Search customers..." 
+                                   value="{{ request.GET.search }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" name="score_range">
+                                <option value="">All Scores</option>
+                                <option value="high" {% if request.GET.score_range == 'high' %}selected{% endif %}>High (80+)</option>
+                                <option value="medium" {% if request.GET.score_range == 'medium' %}selected{% endif %}>Medium (50-79)</option>
+                                <option value="low" {% if request.GET.score_range == 'low' %}selected{% endif %}>Low (1-49)</option>
+                                <option value="none" {% if request.GET.score_range == 'none' %}selected{% endif %}>Not Scored</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" name="sort">
+                                <option value="-score" {% if request.GET.sort == '-score' %}selected{% endif %}>Score (High to Low)</option>
+                                <option value="score" {% if request.GET.sort == 'score' %}selected{% endif %}>Score (Low to High)</option>
+                                <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                                <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Recently Added</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-light">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-bar text-info"></i> Summary
+                    </h5>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-success">{{ total_customers }}</div>
+                            <div class="text-muted small">Total</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-primary">{{ average_score|floatformat:1 }}</div>
+                            <div class="text-muted small">Avg Score</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Scores Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table text-primary"></i> Customer Scores
+                        </h5>
+                        <span class="badge bg-secondary">{{ customers.count }} customers</span>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Customer</th>
+                                <th>Contact</th>
+                                <th class="text-center">Score</th>
+                                <th class="text-center">Last Updated</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in customers %}
+                            <tr class="customer-row">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                            {{ customer.first_name|first }}{{ customer.last_name|first }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">{{ customer.first_name }} {{ customer.last_name }}</div>
+                                            {% if customer.company %}
+                                                <div class="text-muted small">{{ customer.company }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if customer.email %}
+                                        <div><i class="fas fa-envelope text-muted me-1"></i> {{ customer.email }}</div>
+                                    {% endif %}
+                                    {% if customer.phone %}
+                                        <div><i class="fas fa-phone text-muted me-1"></i> {{ customer.phone }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if customer.score %}
+                                        {% if customer.score >= 80 %}
+                                            <span class="badge score-badge score-high">{{ customer.score }}</span>
+                                        {% elif customer.score >= 50 %}
+                                            <span class="badge score-badge score-medium">{{ customer.score }}</span>
+                                        {% else %}
+                                            <span class="badge score-badge score-low">{{ customer.score }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge score-badge score-none">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if customer.score_updated_at %}
+                                        <div>{{ customer.score_updated_at|date:"M d, Y" }}</div>
+                                        <div class="text-muted small">{{ customer.score_updated_at|time:"H:i" }}</div>
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'analytics:customer_score_detail' customer.id %}" 
+                                           class="btn btn-sm btn-outline-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-primary btn-recalculate" 
+                                                onclick="recalculateScore({{ customer.id }})" title="Recalculate">
+                                            <i class="fas fa-calculator"></i>
+                                        </button>
+                                        <a href="/customers/{{ customer.id }}/" 
+                                           class="btn btn-sm btn-outline-secondary" title="Edit Customer">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="fas fa-users fa-3x mb-3"></i>
+                                        <h5>No customers found</h5>
+                                        <p>Try adjusting your filters or add some customers to get started.</p>
+                                        <a href="/customers/add/" class="btn btn-primary">
+                                            <i class="fas fa-plus"></i> Add Customer
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="card-footer bg-white">
+                    <nav aria-label="Customer pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.score_range %}&score_range={{ request.GET.score_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.score_range %}&score_range={{ request.GET.score_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.score_range %}&score_range={{ request.GET.score_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.score_range %}&score_range={{ request.GET.score_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Last</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recalculation Modal -->
+<div class="modal fade" id="recalculationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calculator text-primary"></i> Recalculating Score
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Please wait while we recalculate the customer score...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Recalculation Modal -->
+<div class="modal fade" id="bulkRecalculationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calculator text-primary"></i> Bulk Recalculation
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Recalculating scores for all customers...</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function recalculateScore(customerId) {
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('recalculationModal'));
+    modal.show();
+    
+    // Make AJAX request to recalculate score
+    fetch(`{% url 'analytics:recalculate_customer_score' 0 %}`.replace('0', customerId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        modal.hide();
+        if (data.success) {
+            // Refresh the page to show updated score
+            window.location.reload();
+        } else {
+            alert('Error recalculating score: ' + data.error);
+        }
+    })
+    .catch(error => {
+        modal.hide();
+        console.error('Error:', error);
+        alert('Error recalculating score. Please try again.');
+    });
+}
+
+function bulkRecalculate() {
+    if (!confirm('This will recalculate scores for all customers. This may take a while. Continue?')) {
+        return;
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('bulkRecalculationModal'));
+    modal.show();
+    
+    // Make AJAX request for bulk recalculation
+    fetch('{% url 'analytics:bulk_score_calculation' %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        modal.hide();
+        if (data.success) {
+            alert(`Successfully recalculated scores for ${data.count} customers!`);
+            window.location.reload();
+        } else {
+            alert('Error in bulk recalculation: ' + data.error);
+        }
+    })
+    .catch(error => {
+        modal.hide();
+        console.error('Error:', error);
+        alert('Error in bulk recalculation. Please try again.');
+    });
+}
+
+// Add CSRF token to all AJAX requests
+document.addEventListener('DOMContentLoaded', function() {
+    // Create CSRF token input if it doesn't exist
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        document.body.appendChild(csrfInput);
+    }
+});
+</script>
+{% endblock %}

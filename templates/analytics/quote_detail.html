@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quote #{{ quote.quote_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quote-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    .detail-card {
+        border: none;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .timeline-item {
+        border-left: 3px solid #dee2e6;
+        padding-left: 20px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 5px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #6c757d;
+    }
+    .timeline-item.status-pending:before { background: #ffc107; }
+    .timeline-item.status-sent:before { background: #17a2b8; }
+    .timeline-item.status-approved:before { background: #28a745; }
+    .timeline-item.status-rejected:before { background: #dc3545; }
+    .amount-display {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    .validity-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+    .action-button {
+        margin: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Quote Header -->
+    <div class="quote-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="bi bi-file-text"></i> Quote #{{ quote.quote_number }}</h1>
+                <p class="mb-0 opacity-75">{{ quote.title }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="badge bg-{% if quote.status == 'pending' %}warning{% elif quote.status == 'sent' %}info{% elif quote.status == 'approved' %}success{% elif quote.status == 'rejected' %}danger{% elif quote.status == 'expired' %}secondary{% else %}primary{% endif %} fs-6 mb-2">
+                    {{ quote.get_status_display }}
+                </span>
+                <div class="amount-display">${{ quote.amount }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="btn-group me-3">
+                <a href="{% url 'analytics:quote_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Quotes
+                </a>
+                <a href="{% url 'analytics:quote_job_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </div>
+            
+            {% if quote.status != 'approved' and quote.status != 'rejected' %}
+            <div class="btn-group me-3">
+                <a href="{% url 'analytics:quote_edit' quote.pk %}" class="btn btn-primary action-button">
+                    <i class="bi bi-pencil"></i> Edit Quote
+                </a>
+                {% if quote.status == 'pending' %}
+                <a href="{% url 'analytics:quote_send' quote.pk %}" class="btn btn-success action-button">
+                    <i class="bi bi-envelope"></i> Send Quote
+                </a>
+                {% endif %}
+                <button class="btn btn-info action-button" data-bs-toggle="modal" data-bs-target="#duplicateModal">
+                    <i class="bi bi-files"></i> Duplicate
+                </button>
+            </div>
+            {% endif %}
+
+            {% if quote.status == 'accepted' %}
+            <div class="btn-group me-3">
+                <a href="{% url 'analytics:job_create_from_quote' quote.pk %}" class="btn btn-success action-button">
+                    <i class="bi bi-briefcase"></i> Create Job
+                </a>
+                <a href="{% url 'analytics:quote_generate_invoice' quote.pk %}" class="btn btn-warning action-button">
+                    <i class="bi bi-receipt"></i> Generate Invoice
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="btn-group">
+                <a href="{% url 'analytics:quote_pdf' quote.pk %}" class="btn btn-outline-danger action-button" target="_blank">
+                    <i class="bi bi-file-pdf"></i> Download PDF
+                </a>
+                <button class="btn btn-outline-info action-button" onclick="printQuote()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Validity Warning -->
+    {% if quote.is_expired %}
+    <div class="row">
+        <div class="col-12">
+            <div class="validity-warning">
+                <h6><i class="bi bi-exclamation-triangle"></i> Quote Expired</h6>
+                <p class="mb-0">This quote expired on {{ quote.valid_until|date:"M d, Y" }}. 
+                   {% if quote.status != 'approved' and quote.status != 'rejected' %}
+                   <a href="{% url 'analytics:quote_extend' quote.pk %}">Extend validity</a> or create a new quote.
+                   {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% elif quote.days_until_expiry <= 3 and quote.status != 'approved' %}
+    <div class="row">
+        <div class="col-12">
+            <div class="validity-warning">
+                <h6><i class="bi bi-clock"></i> Quote Expiring Soon</h6>
+                <p class="mb-0">This quote will expire in {{ quote.days_until_expiry }} day{{ quote.days_until_expiry|pluralize }} 
+                   ({{ quote.valid_until|date:"M d, Y" }}).
+                   <a href="{% url 'analytics:quote_extend' quote.pk %}">Extend validity</a>
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Main Quote Details -->
+        <div class="col-lg-8">
+            <!-- Customer Information -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-person"></i> Customer Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Name:</strong> {{ quote.customer.full_name }}</p>
+                                <p><strong>Email:</strong> 
+                                   <a href="mailto:{{ quote.customer.email }}">{{ quote.customer.email }}</a>
+                                </p>
+                                <p><strong>Phone:</strong> 
+                                   {% if quote.customer.phone %}
+                                   <a href="tel:{{ quote.customer.phone }}">{{ quote.customer.phone }}</a>
+                                   {% else %}
+                                   <span class="text-muted">Not provided</span>
+                                   {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                {% if quote.customer.company %}
+                                <p><strong>Company:</strong> {{ quote.customer.company }}</p>
+                                {% endif %}
+                                <p><strong>Customer Since:</strong> {{ quote.customer.created_at|date:"M d, Y" }}</p>
+                                <p><strong>Total Quotes:</strong> {{ quote.customer.quote_set.count }}</p>
+                                <p><strong>Approved Quotes:</strong> {{ approved_quotes_count }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'customers:customer_detail' quote.customer.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View Customer Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quote Details -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-file-text"></i> Quote Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Service Type:</strong> {{ quote.get_service_type_display }}</p>
+                                <p><strong>Priority:</strong> 
+                                   <span class="badge bg-{% if quote.priority == 'urgent' %}danger{% elif quote.priority == 'high' %}warning{% else %}success{% endif %}">
+                                       {{ quote.get_priority_display }}
+                                   </span>
+                                </p>
+                                <p><strong>Created:</strong> {{ quote.created_at|date:"M d, Y g:i A" }}</p>
+                                {% if quote.created_by %}
+                                <p><strong>Created By:</strong> {{ quote.created_by.get_full_name|default:quote.created_by.username }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Valid Until:</strong> {{ quote.valid_until|date:"M d, Y" }}</p>
+                                {% if quote.estimated_duration %}
+                                <p><strong>Estimated Duration:</strong> {{ quote.estimated_duration }} days</p>
+                                {% endif %}
+                                {% if quote.location %}
+                                <p><strong>Location:</strong> {{ quote.location }}</p>
+                                {% endif %}
+                                {% if quote.special_requirements %}
+                                <p><strong>Special Requirements:</strong> {{ quote.special_requirements|truncatechars:100 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if quote.description %}
+                        <div class="mt-3">
+                            <strong>Description:</strong>
+                            <div class="mt-2 p-3 bg-light rounded">
+                                {{ quote.description|linebreaks }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if quote.items %}
+                        <div class="mt-4">
+                            <h6>Quote Items</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Quantity</th>
+                                            <th>Unit Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in quote.items %}
+                                        <tr>
+                                            <td>{{ item.description }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>${{ item.unit_price }}</td>
+                                            <td>${{ item.total_price }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <th colspan="3">Total Amount</th>
+                                            <th>${{ quote.amount }}</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files and Attachments -->
+            {% if quote.attachments.exists %}
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-paperclip"></i> Attachments</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for attachment in quote.attachments.all %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-file-earmark fs-3 text-primary"></i>
+                                        <h6 class="card-title mt-2">{{ attachment.filename|truncatechars:20 }}</h6>
+                                        <p class="card-text">
+                                            <small class="text-muted">{{ attachment.file_size|filesizeformat }}</small>
+                                        </p>
+                                        <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="bi bi-lightning"></i> Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if quote.status == 'sent' %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'analytics:quote_approve' quote.pk %}" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Mark as Approved
+                            </a>
+                            <a href="{% url 'analytics:quote_reject' quote.pk %}" class="btn btn-danger">
+                                <i class="bi bi-x-circle"></i> Mark as Rejected
+                            </a>
+                            <a href="{% url 'analytics:quote_follow_up' quote.pk %}" class="btn btn-info">
+                                <i class="bi bi-telephone"></i> Follow Up
+                            </a>
+                        </div>
+                        {% elif quote.status == 'pending' %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'analytics:quote_send' quote.pk %}" class="btn btn-success">
+                                <i class="bi bi-envelope"></i> Send to Customer
+                            </a>
+                            <a href="{% url 'analytics:quote_edit' quote.pk %}" class="btn btn-primary">
+                                <i class="bi bi-pencil"></i> Edit Quote
+                            </a>
+                        </div>
+                        {% elif quote.status == 'approved' %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'analytics:job_create_from_quote' quote.pk %}" class="btn btn-success">
+                                <i class="bi bi-briefcase"></i> Create Job
+                            </a>
+                            <a href="{% url 'analytics:quote_generate_invoice' quote.pk %}" class="btn btn-warning">
+                                <i class="bi bi-receipt"></i> Generate Invoice
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="bi bi-clock-history"></i> Timeline</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline-item status-{{ quote.status }}">
+                            <strong>Quote {{ quote.get_status_display }}</strong>
+                            <div class="text-muted">{{ quote.updated_at|date:"M d, Y g:i A" }}</div>
+                        </div>
+                        
+                        {% if quote.sent_at %}
+                        <div class="timeline-item status-sent">
+                            <strong>Quote Sent</strong>
+                            <div class="text-muted">{{ quote.sent_at|date:"M d, Y g:i A" }}</div>
+                        </div>
+                        {% endif %}
+
+                        <div class="timeline-item">
+                            <strong>Quote Created</strong>
+                            <div class="text-muted">{{ quote.created_at|date:"M d, Y g:i A" }}</div>
+                            {% if quote.created_by %}
+                            <div class="text-muted">By {{ quote.created_by.get_full_name|default:quote.created_by.username }}</div>
+                            {% else %}
+                            <div class="text-muted">By System</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Additional timeline entries from quote updates -->
+                        {% for update in quote.updates.all|slice:":5" %}
+                        <div class="timeline-item">
+                            <strong>{{ update.title }}</strong>
+                            <div class="text-muted">{{ update.created_at|date:"M d, Y g:i A" }}</div>
+                            {% if update.description %}
+                            <div class="mt-1">{{ update.description|truncatechars:100 }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Information -->
+            {% if related_quotes or related_jobs %}
+            <div class="detail-card">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="bi bi-link"></i> Related Items</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if related_quotes %}
+                        <h6>Related Quotes</h6>
+                        {% for related_quote in related_quotes %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <a href="{% url 'analytics:quote_detail' related_quote.pk %}" class="text-decoration-none">
+                                Quote #{{ related_quote.quote_number }}
+                            </a>
+                            <span class="badge bg-{% if related_quote.status == 'approved' %}success{% elif related_quote.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                                {{ related_quote.get_status_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+
+                        {% if related_jobs %}
+                        <h6 class="mt-3">Related Jobs</h6>
+                        {% for job in related_jobs %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <a href="{% url 'analytics:job_detail' job.pk %}" class="text-decoration-none">
+                                Job #{{ job.job_number }}
+                            </a>
+                            <span class="badge bg-{% if job.status == 'completed' %}success{% elif job.status == 'in_progress' %}primary{% else %}warning{% endif %}">
+                                {{ job.get_status_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Duplicate Quote Modal -->
+<div class="modal fade" id="duplicateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Duplicate Quote</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'analytics:quote_duplicate' quote.pk %}">
+            <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">New Quote Title</label>
+                        <input type="text" class="form-control" name="title" value="{{ quote.title }} (Copy)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Customer</label>
+                        <select class="form-select" name="customer">
+                            <option value="{{ quote.customer.id }}" selected>{{ quote.customer.full_name }}</option>
+                            {% for customer in all_customers %}
+                            {% if customer.id != quote.customer.id %}
+                            <option value="{{ customer.id }}">{{ customer.full_name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="copy_attachments" checked>
+                            <label class="form-check-label">Copy attachments</label>
+                        </div>
+                    </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Duplicate</button>
+            </div>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function printQuote() {
+    window.print();
+}
+
+// Handle duplicate form submission
+document.getElementById('duplicateModal').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this.querySelector('form');
+    form.submit();
+});
+</script>
+{% endblock %}

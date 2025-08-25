@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Process Email{% endblock %}
+
+{% block extra_css %}
+<style>
+    .email-preview {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .email-header {
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+    .email-content {
+        white-space: pre-wrap;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .processing-results {
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .detected-info {
+        background: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    .form-section {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-envelope-check"></i> Process Email</h1>
+                <a href="{% url 'analytics:quote_job_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if email_data %}
+    <!-- Email Preview -->
+    <div class="row">
+        <div class="col-12">
+            <div class="email-preview">
+                <div class="email-header">
+                    <h5><i class="bi bi-envelope"></i> Email Preview</h5>
+                    <p class="mb-1"><strong>From:</strong> {{ email_data.sender }}</p>
+                    <p class="mb-1"><strong>Subject:</strong> {{ email_data.subject }}</p>
+                    <p class="mb-0"><strong>Date:</strong> {{ email_data.date|date:"M d, Y g:i A" }}</p>
+                </div>
+                <div class="email-content">{{ email_data.content }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-Detection Results -->
+    {% if detection_results %}
+    <div class="row">
+        <div class="col-12">
+            <div class="processing-results">
+                <h5><i class="bi bi-robot"></i> Auto-Detection Results</h5>
+                
+                {% if detection_results.type %}
+                <div class="detected-info">
+                    <strong>Email Type:</strong> 
+                    <span class="badge bg-{% if detection_results.type == 'quote_request' %}primary{% elif detection_results.type == 'job_update' %}info{% else %}secondary{% endif %}">
+                        {{ detection_results.type|title|replace:"_":" " }}
+                    </span>
+                </div>
+                {% endif %}
+
+                {% if detection_results.customer %}
+                <div class="detected-info">
+                    <strong>Customer:</strong> {{ detection_results.customer.full_name }} ({{ detection_results.customer.email }})
+                </div>
+                {% endif %}
+
+                {% if detection_results.service_type %}
+                <div class="detected-info">
+                    <strong>Service Type:</strong> {{ detection_results.service_type|title }}
+                </div>
+                {% endif %}
+
+                {% if detection_results.priority %}
+                <div class="detected-info">
+                    <strong>Priority:</strong> 
+                    <span class="badge bg-{% if detection_results.priority == 'urgent' %}danger{% elif detection_results.priority == 'high' %}warning{% else %}success{% endif %}">
+                        {{ detection_results.priority|title }}
+                    </span>
+                </div>
+                {% endif %}
+
+                {% if detection_results.keywords %}
+                <div class="detected-info">
+                    <strong>Keywords Found:</strong>
+                    {% for keyword in detection_results.keywords %}
+                    <span class="badge bg-light text-dark">{{ keyword }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Processing Form -->
+    <div class="row">
+        <div class="col-12">
+            <div class="form-section">
+                <h5><i class="bi bi-gear"></i> Email Processing Options</h5>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Email Input Method -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6>Email Input Method</h6>
+                            <div class="btn-group" role="group" data-bs-toggle="buttons">
+                                <input type="radio" class="btn-check" name="input_method" id="paste_email" value="paste" checked>
+                                <label class="btn btn-outline-primary" for="paste_email">
+                                    <i class="bi bi-clipboard"></i> Paste Email
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="input_method" id="upload_file" value="upload">
+                                <label class="btn btn-outline-primary" for="upload_file">
+                                    <i class="bi bi-upload"></i> Upload File
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="input_method" id="fetch_email" value="fetch">
+                                <label class="btn btn-outline-primary" for="fetch_email">
+                                    <i class="bi bi-download"></i> Fetch from Server
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paste Email Section -->
+                    <div id="paste-section" class="input-section">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="sender_email" class="form-label">Sender Email</label>
+                                <input type="email" class="form-control" id="sender_email" name="sender_email" 
+                                       value="{% if email_data %}{{ email_data.sender }}{% endif %}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email_subject" class="form-label">Subject</label>
+                                <input type="text" class="form-control" id="email_subject" name="email_subject"
+                                       value="{% if email_data %}{{ email_data.subject }}{% endif %}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email_content" class="form-label">Email Content</label>
+                            <textarea class="form-control" id="email_content" name="email_content" rows="8" 
+                                      placeholder="Paste the email content here...">{% if email_data %}{{ email_data.content }}{% endif %}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Upload File Section -->
+                    <div id="upload-section" class="input-section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="email_file" class="form-label">Email File</label>
+                            <input type="file" class="form-control" id="email_file" name="email_file" 
+                                   accept=".eml,.msg,.txt">
+                            <div class="form-text">Upload email files in .eml, .msg, or .txt format</div>
+                        </div>
+                    </div>
+
+                    <!-- Fetch Email Section -->
+                    <div id="fetch-section" class="input-section" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="email_server" class="form-label">Email Server</label>
+                                <select class="form-select" id="email_server" name="email_server">
+                                    <option value="">Select server...</option>
+                                    <option value="gmail">Gmail (IMAP)</option>
+                                    <option value="outlook">Outlook/Hotmail</option>
+                                    <option value="yahoo">Yahoo Mail</option>
+                                    <option value="custom">Custom IMAP</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="fetch_count" class="form-label">Number of Emails</label>
+                                <input type="number" class="form-control" id="fetch_count" name="fetch_count" 
+                                       value="10" min="1" max="50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processing Options -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6>Processing Options</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="auto_respond" name="auto_respond" checked>
+                                        <label class="form-check-label" for="auto_respond">
+                                            Send automatic response
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="create_quote" name="create_quote">
+                                        <label class="form-check-label" for="create_quote">
+                                            Auto-create quote if detected
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="create_job" name="create_job">
+                                        <label class="form-check-label" for="create_job">
+                                            Auto-create job if detected
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="assign_to_user" name="assign_to_user">
+                                        <label class="form-check-label" for="assign_to_user">
+                                            Auto-assign to user
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="set_priority" name="set_priority" checked>
+                                        <label class="form-check-label" for="set_priority">
+                                            Auto-detect priority
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="extract_attachments" name="extract_attachments">
+                                        <label class="form-check-label" for="extract_attachments">
+                                            Extract attachments
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Overrides -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6>Manual Overrides (Optional)</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="force_type" class="form-label">Force Email Type</label>
+                                    <select class="form-select" id="force_type" name="force_type">
+                                        <option value="">Auto-detect</option>
+                                        <option value="quote_request">Quote Request</option>
+                                        <option value="job_update">Job Update</option>
+                                        <option value="customer_inquiry">Customer Inquiry</option>
+                                        <option value="complaint">Complaint</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="force_customer" class="form-label">Select Customer</label>
+                                    <select class="form-select" id="force_customer" name="force_customer">
+                                        <option value="">Auto-detect/Create</option>
+                                        {% for customer in customers %}
+                                        <option value="{{ customer.id }}">{{ customer.full_name }} - {{ customer.email }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="force_priority" class="form-label">Force Priority</label>
+                                    <select class="form-select" id="force_priority" name="force_priority">
+                                        <option value="">Auto-detect</option>
+                                        <option value="low">Low</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="high">High</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="btn-group">
+                                <button type="submit" name="action" value="preview" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Preview Processing
+                                </button>
+                                <button type="submit" name="action" value="process" class="btn btn-success">
+                                    <i class="bi bi-gear"></i> Process Email
+                                </button>
+                                <button type="submit" name="action" value="batch" class="btn btn-warning">
+                                    <i class="bi bi-collection"></i> Batch Process
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing History -->
+    {% if recent_processing %}
+    <div class="row">
+        <div class="col-12">
+            <div class="form-section">
+                <h5><i class="bi bi-clock-history"></i> Recent Processing History</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Sender</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Actions Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_processing %}
+                            <tr>
+                                <td>{{ item.processed_date|date:"M d, Y g:i A" }}</td>
+                                <td>{{ item.sender_email }}</td>
+                                <td>
+                                    <span class="badge bg-{% if item.email_type == 'quote_request' %}primary{% elif item.email_type == 'job_update' %}info{% else %}secondary{% endif %}">
+                                        {{ item.email_type|title|replace:"_":" " }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if item.status == 'success' %}success{% elif item.status == 'error' %}danger{% else %}warning{% endif %}">
+                                        {{ item.status|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if item.quote_created %}<span class="badge bg-primary me-1">Quote</span>{% endif %}
+                                    {% if item.job_created %}<span class="badge bg-info me-1">Job</span>{% endif %}
+                                    {% if item.customer_created %}<span class="badge bg-success me-1">Customer</span>{% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewProcessingDetails({{ item.id }})">
+                                        <i class="bi bi-eye"></i> Details
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle input method switching
+    const inputMethods = document.querySelectorAll('input[name="input_method"]');
+    const sections = {
+        'paste': document.getElementById('paste-section'),
+        'upload': document.getElementById('upload-section'),
+        'fetch': document.getElementById('fetch-section')
+    };
+
+    inputMethods.forEach(method => {
+        method.addEventListener('change', function() {
+            // Hide all sections
+            Object.values(sections).forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show selected section
+            const selectedSection = sections[this.value];
+            if (selectedSection) {
+                selectedSection.style.display = 'block';
+            }
+        });
+    });
+
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const inputMethod = document.querySelector('input[name="input_method"]:checked').value;
+        
+        if (inputMethod === 'paste') {
+            const content = document.getElementById('email_content').value.trim();
+            if (!content) {
+                e.preventDefault();
+                alert('Please enter email content to process.');
+                return;
+            }
+        } else if (inputMethod === 'upload') {
+            const file = document.getElementById('email_file').files[0];
+            if (!file) {
+                e.preventDefault();
+                alert('Please select a file to upload.');
+                return;
+            }
+        } else if (inputMethod === 'fetch') {
+            const server = document.getElementById('email_server').value;
+            if (!server) {
+                e.preventDefault();
+                alert('Please select an email server.');
+                return;
+            }
+        }
+    });
+});
+
+function viewProcessingDetails(processingId) {
+    // Implement modal or redirect to view processing details
+    window.location.href = `/analytics/email-processing/${processingId}/`;
+}
+</script>
+{% endblock %}

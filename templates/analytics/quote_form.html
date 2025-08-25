@@ -1,0 +1,591 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if quote %}Edit Quote{% else %}New Quote{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .section-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .customer-preview {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    .quote-items-table {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .btn-add-item {
+        background: #e3f2fd;
+        border: 2px dashed #2196f3;
+        color: #1976d2;
+        padding: 15px;
+        border-radius: 8px;
+        width: 100%;
+    }
+    .btn-add-item:hover {
+        background: #bbdefb;
+        border-color: #1976d2;
+    }
+    .item-row {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+    .total-amount {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="bi bi-{% if quote %}pencil{% else %}plus-circle{% endif %}"></i>
+                    {% if quote %}Edit Quote #{{ quote.quote_number }}{% else %}New Quote{% endif %}
+                </h1>
+                <a href="{% if quote %}{% url 'analytics:quote_detail' quote.pk %}{% else %}{% url 'analytics:quote_list' %}{% endif %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="quoteForm">
+        {% csrf_token %}
+        
+        <!-- Customer Information -->
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-person"></i> Customer Information</h4>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="customer" class="form-label">Customer *</label>
+                        <select class="form-select" id="customer" name="customer" required>
+                            <option value="">Select a customer...</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}" 
+                                    data-email="{{ customer.email }}" 
+                                    data-phone="{{ customer.phone }}"
+                                    data-company="{{ customer.company }}"
+                                    {% if quote and quote.customer.id == customer.id %}selected{% endif %}>
+                                {{ customer.full_name }} - {{ customer.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Quick Actions</label>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#newCustomerModal">
+                                <i class="bi bi-person-plus"></i> New Customer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Preview -->
+            <div id="customerPreview" class="customer-preview" style="display: none;">
+                <h6>Selected Customer</h6>
+                <div id="customerDetails"></div>
+            </div>
+        </div>
+
+        <!-- Quote Details -->
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-file-text"></i> Quote Details</h4>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Quote Title *</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{% if quote %}{{ quote.title }}{% endif %}" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="service_type" class="form-label">Service Type *</label>
+                        <select class="form-select" id="service_type" name="service_type" required>
+                            <option value="">Select service...</option>
+                            <option value="consulting" {% if quote and quote.service_type == 'consulting' %}selected{% endif %}>Consulting</option>
+                            <option value="installation" {% if quote and quote.service_type == 'installation' %}selected{% endif %}>Installation</option>
+                            <option value="maintenance" {% if quote and quote.service_type == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                            <option value="repair" {% if quote and quote.service_type == 'repair' %}selected{% endif %}>Repair</option>
+                            <option value="training" {% if quote and quote.service_type == 'training' %}selected{% endif %}>Training</option>
+                            <option value="other" {% if quote and quote.service_type == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority">
+                            <option value="normal" {% if quote and quote.priority == 'normal' %}selected{% endif %}>Normal</option>
+                            <option value="high" {% if quote and quote.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="urgent" {% if quote and quote.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="valid_until" class="form-label">Valid Until *</label>
+                        <input type="date" class="form-control" id="valid_until" name="valid_until" 
+                               value="{% if quote %}{{ quote.valid_until|date:'Y-m-d' }}{% endif %}" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="estimated_duration" class="form-label">Estimated Duration (days)</label>
+                        <input type="number" class="form-control" id="estimated_duration" name="estimated_duration" 
+                               value="{% if quote %}{{ quote.estimated_duration }}{% endif %}" min="1">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location" 
+                               value="{% if quote %}{{ quote.location }}{% endif %}" placeholder="Job location">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="4" 
+                          placeholder="Detailed description of the work to be performed...">{% if quote %}{{ quote.description }}{% endif %}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="special_requirements" class="form-label">Special Requirements</label>
+                <textarea class="form-control" id="special_requirements" name="special_requirements" rows="3" 
+                          placeholder="Any special requirements, materials, or conditions...">{% if quote %}{{ quote.special_requirements }}{% endif %}</textarea>
+            </div>
+        </div>
+
+        <!-- Quote Items -->
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-list-ul"></i> Quote Items</h4>
+            </div>
+            
+            <div class="quote-items-table">
+                <div id="quoteItems">
+                    {% if quote and quote.items %}
+                    {% for item in quote.items %}
+                    <div class="item-row">
+                        <div class="row align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label">Description</label>
+                                <input type="text" class="form-control item-description" name="item_description[]" 
+                                       value="{{ item.description }}" placeholder="Item description">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control item-quantity" name="item_quantity[]" 
+                                       value="{{ item.quantity }}" min="1" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Unit Price</label>
+                                <input type="number" class="form-control item-unit-price" name="item_unit_price[]" 
+                                       value="{{ item.unit_price }}" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Total</label>
+                                <input type="text" class="form-control item-total" readonly value="${{ item.total_price }}">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-danger btn-sm remove-item">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="item-row">
+                        <div class="row align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label">Description</label>
+                                <input type="text" class="form-control item-description" name="item_description[]" 
+                                       placeholder="Item description">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control item-quantity" name="item_quantity[]" 
+                                       value="1" min="1" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Unit Price</label>
+                                <input type="number" class="form-control item-unit-price" name="item_unit_price[]" 
+                                       value="0" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Total</label>
+                                <input type="text" class="form-control item-total" readonly value="$0.00">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-danger btn-sm remove-item">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <button type="button" class="btn btn-add-item mt-3" id="addItem">
+                    <i class="bi bi-plus-circle"></i> Add Item
+                </button>
+                
+                <div class="row mt-4">
+                    <div class="col-md-8"></div>
+                    <div class="col-md-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5>Total Amount:</h5>
+                            <span class="total-amount" id="totalAmount">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-paperclip"></i> Attachments</h4>
+            </div>
+            
+            <div class="mb-3">
+                <label for="attachments" class="form-label">Upload Files</label>
+                <input type="file" class="form-control" id="attachments" name="attachments" multiple 
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                <div class="form-text">You can upload multiple files (PDF, Word documents, images)</div>
+            </div>
+
+            {% if quote and quote.attachments.exists %}
+            <div class="mt-3">
+                <h6>Current Attachments</h6>
+                <div class="row">
+                    {% for attachment in quote.attachments.all %}
+                    <div class="col-md-4 mb-2">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-file-earmark me-2"></i>
+                            <a href="{{ attachment.file.url }}" target="_blank" class="text-decoration-none">
+                                {{ attachment.filename|truncatechars:30 }}
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
+                                    onclick="removeAttachment({{ attachment.id }})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="btn-group">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary">
+                            <i class="bi bi-save"></i> Save as Draft
+                        </button>
+                        <button type="submit" name="action" value="save_and_send" class="btn btn-success">
+                            <i class="bi bi-envelope"></i> Save & Send
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a href="{% if quote %}{% url 'analytics:quote_detail' quote.pk %}{% else %}{% url 'analytics:quote_list' %}{% endif %}" 
+                       class="btn btn-secondary me-2">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                    {% if quote %}
+                    <button type="button" class="btn btn-info" onclick="previewQuote()">
+                        <i class="bi bi-eye"></i> Preview
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- New Customer Modal -->
+<div class="modal fade" id="newCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newCustomerForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">First Name *</label>
+                                <input type="text" class="form-control" name="first_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" name="last_name" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" name="email" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" name="phone">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Company</label>
+                        <input type="text" class="form-control" name="company">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="createCustomer()">Create Customer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Customer selection preview
+    const customerSelect = document.getElementById('customer');
+    const customerPreview = document.getElementById('customerPreview');
+    const customerDetails = document.getElementById('customerDetails');
+
+    customerSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+            const email = selectedOption.dataset.email;
+            const phone = selectedOption.dataset.phone;
+            const company = selectedOption.dataset.company;
+            
+            customerDetails.innerHTML = `
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+                <p><strong>Company:</strong> ${company || 'Not provided'}</p>
+            `;
+            customerPreview.style.display = 'block';
+        } else {
+            customerPreview.style.display = 'none';
+        }
+    });
+
+    // Set default valid until date (30 days from now)
+    const validUntil = document.getElementById('valid_until');
+    if (!validUntil.value) {
+        const date = new Date();
+        date.setDate(date.getDate() + 30);
+        validUntil.value = date.toISOString().split('T')[0];
+    }
+
+    // Quote items management
+    const quoteItems = document.getElementById('quoteItems');
+    const addItemBtn = document.getElementById('addItem');
+    const totalAmount = document.getElementById('totalAmount');
+
+    // Add new item
+    addItemBtn.addEventListener('click', function() {
+        const newItem = document.createElement('div');
+        newItem.className = 'item-row';
+        newItem.innerHTML = `
+            <div class="row align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-control item-description" name="item_description[]" 
+                           placeholder="Item description">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" class="form-control item-quantity" name="item_quantity[]" 
+                           value="1" min="1" step="0.01">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Unit Price</label>
+                    <input type="number" class="form-control item-unit-price" name="item_unit_price[]" 
+                           value="0" min="0" step="0.01">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Total</label>
+                    <input type="text" class="form-control item-total" readonly value="$0.00">
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-danger btn-sm remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        quoteItems.appendChild(newItem);
+        attachItemEventListeners(newItem);
+        calculateTotal();
+    });
+
+    // Remove item and calculate totals
+    function attachItemEventListeners(item) {
+        const removeBtn = item.querySelector('.remove-item');
+        const quantityInput = item.querySelector('.item-quantity');
+        const priceInput = item.querySelector('.item-unit-price');
+        
+        removeBtn.addEventListener('click', function() {
+            if (quoteItems.children.length > 1) {
+                item.remove();
+                calculateTotal();
+            }
+        });
+
+        [quantityInput, priceInput].forEach(input => {
+            input.addEventListener('input', function() {
+                updateItemTotal(item);
+                calculateTotal();
+            });
+        });
+    }
+
+    function updateItemTotal(item) {
+        const quantity = parseFloat(item.querySelector('.item-quantity').value) || 0;
+        const price = parseFloat(item.querySelector('.item-unit-price').value) || 0;
+        const total = quantity * price;
+        item.querySelector('.item-total').value = `$${total.toFixed(2)}`;
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        document.querySelectorAll('.item-row').forEach(item => {
+            const quantity = parseFloat(item.querySelector('.item-quantity').value) || 0;
+            const price = parseFloat(item.querySelector('.item-unit-price').value) || 0;
+            total += quantity * price;
+        });
+        totalAmount.textContent = `$${total.toFixed(2)}`;
+    }
+
+    // Attach event listeners to existing items
+    document.querySelectorAll('.item-row').forEach(attachItemEventListeners);
+    calculateTotal();
+
+    // Form validation
+    document.getElementById('quoteForm').addEventListener('submit', function(e) {
+        const customer = document.getElementById('customer').value;
+        const title = document.getElementById('title').value.trim();
+        const serviceType = document.getElementById('service_type').value;
+
+        if (!customer || !title || !serviceType) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+            return;
+        }
+
+        // Validate at least one item with description and price
+        const items = document.querySelectorAll('.item-row');
+        let hasValidItem = false;
+        
+        items.forEach(item => {
+            const description = item.querySelector('.item-description').value.trim();
+            const price = parseFloat(item.querySelector('.item-unit-price').value) || 0;
+            
+            if (description && price > 0) {
+                hasValidItem = true;
+            }
+        });
+
+        if (!hasValidItem) {
+            e.preventDefault();
+            alert('Please add at least one item with description and price.');
+            return;
+        }
+    });
+});
+
+function createCustomer() {
+    const form = document.getElementById('newCustomerForm');
+    const formData = new FormData(form);
+    
+    // Here you would make an AJAX call to create the customer
+    // For now, we'll just close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('newCustomerModal'));
+    modal.hide();
+    
+    // In a real implementation, you'd add the new customer to the select
+    alert('Customer creation would be implemented here');
+}
+
+function previewQuote() {
+    // Open quote preview in new window
+    const quoteId = '{% if quote %}{{ quote.pk }}{% endif %}';
+    if (quoteId) {
+        window.open(`/analytics/quotes/${quoteId}/preview/`, '_blank');
+    }
+}
+
+function removeAttachment(attachmentId) {
+    if (confirm('Are you sure you want to remove this attachment?')) {
+        // AJAX call to remove attachment
+        fetch(`/analytics/attachments/${attachmentId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -48,6 +48,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'analytics:dashboard' %}">
+                            <i class="bi bi-graph-up"></i> Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'customers:duplicate_detection' %}">
                             <i class="bi bi-people"></i> Duplicates
                         </a>
@@ -104,6 +109,109 @@
                             <a class="nav-link" href="{% url 'customers:duplicate_detection' %}">
                                 <i class="bi bi-exclamation-triangle"></i> Duplicate Detection
                             </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'analytics:dashboard' %}">
+                                <i class="bi bi-graph-up"></i> Analytics
+                            </a>
+                        </li>
+                        
+                        <!-- Quote & Job Management -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="quoteJobDropdown" role="button" 
+                               data-bs-toggle="collapse" data-bs-target="#quoteJobCollapse" aria-expanded="false">
+                                <i class="bi bi-clipboard-check"></i> Quotes & Jobs
+                            </a>
+                            <div class="collapse" id="quoteJobCollapse">
+                                <ul class="nav flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:quote_job_dashboard' %}">
+                                            <i class="bi bi-speedometer2"></i> Dashboard
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:quote_list' %}">
+                                            <i class="bi bi-file-text"></i> Quote Requests
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:job_list' %}">
+                                            <i class="bi bi-briefcase"></i> Jobs
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:process_email' %}">
+                                            <i class="bi bi-envelope-plus"></i> Process Email
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        
+                        <!-- Task Automation -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="taskDropdown" role="button" 
+                               data-bs-toggle="collapse" data-bs-target="#taskCollapse" aria-expanded="false">
+                                <i class="bi bi-list-task"></i> Task Automation
+                            </a>
+                            <div class="collapse" id="taskCollapse">
+                                <ul class="nav flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:task_dashboard' %}">
+                                            <i class="bi bi-kanban"></i> Task Dashboard
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:workflow_list' %}">
+                                            <i class="bi bi-diagram-3"></i> Workflows
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        
+                        <!-- Lead Scoring -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="leadScoringDropdown" role="button" 
+                               data-bs-toggle="collapse" data-bs-target="#leadScoringCollapse" aria-expanded="false">
+                                <i class="bi bi-star"></i> Lead Scoring
+                            </a>
+                            <div class="collapse" id="leadScoringCollapse">
+                                <ul class="nav flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:lead_scoring_dashboard' %}">
+                                            <i class="bi bi-speedometer2"></i> Dashboard
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:customer_scores_list' %}">
+                                            <i class="bi bi-people"></i> Customer Scores
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        
+                        <!-- Email Automation -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="emailDropdown" role="button" 
+                               data-bs-toggle="collapse" data-bs-target="#emailCollapse" aria-expanded="false">
+                                <i class="bi bi-envelope"></i> Email Automation
+                            </a>
+                            <div class="collapse" id="emailCollapse">
+                                <ul class="nav flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:email_templates' %}">
+                                            <i class="bi bi-file-text"></i> Templates
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'analytics:email_sequences' %}">
+                                            <i class="bi bi-flow-chart"></i> Sequences
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'customers:import_customers_page' %}">

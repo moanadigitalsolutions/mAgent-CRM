@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quote & Job Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        padding: 20px;
+        color: white;
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    .urgent-card {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    }
+    .success-card {
+        background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+    }
+    .warning-card {
+        background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+    }
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .recent-item {
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 0 5px 5px 0;
+    }
+    .recent-item.urgent {
+        border-left-color: #ff6b6b;
+    }
+    .recent-item.high {
+        border-left-color: #ffd43b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-clipboard-check"></i> Quote & Job Dashboard</h1>
+                <div class="btn-group">
+                    <a href="{% url 'analytics:quote_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> New Quote
+                    </a>
+                    <a href="{% url 'analytics:job_create' %}" class="btn btn-success">
+                        <i class="bi bi-briefcase"></i> New Job
+                    </a>
+                    <a href="{% url 'analytics:process_email' %}" class="btn btn-info">
+                        <i class="bi bi-envelope-plus"></i> Process Email
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.quotes_pending }}</div>
+                <div class="stat-label">Pending Quotes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card urgent-card">
+                <div class="stat-number">{{ stats.quotes_overdue }}</div>
+                <div class="stat-label">Overdue Quotes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success-card">
+                <div class="stat-number">{{ stats.jobs_active }}</div>
+                <div class="stat-label">Active Jobs</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning-card">
+                <div class="stat-number">{{ stats.jobs_overdue }}</div>
+                <div class="stat-label">Overdue Jobs</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5><i class="bi bi-graph-up"></i> Quote Requests (Last 30 Days)</h5>
+                <canvas id="quotesChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5><i class="bi bi-briefcase"></i> Jobs Created (Last 30 Days)</h5>
+                <canvas id="jobsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="chart-container">
+                <h5><i class="bi bi-clock-history"></i> Recent Quotes</h5>
+                {% for quote in recent_quotes %}
+                <div class="recent-item {% if quote.priority == 'urgent' %}urgent{% elif quote.priority == 'high' %}high{% endif %}">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ quote.reference_number }}</strong>
+                        <span class="badge bg-{{ quote.status|default:'secondary' }}">{{ quote.get_status_display }}</span>
+                    </div>
+                    <div class="text-muted small">{{ quote.customer.full_name }}</div>
+                    <div class="small">{{ quote.title|truncatechars:50 }}</div>
+                    <div class="text-muted small">{{ quote.requested_date|timesince }} ago</div>
+                </div>
+                {% empty %}
+                <p class="text-muted">No recent quotes</p>
+                {% endfor %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'analytics:quote_list' %}" class="btn btn-sm btn-outline-primary">View All Quotes</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="chart-container">
+                <h5><i class="bi bi-tools"></i> Recent Jobs</h5>
+                {% for job in recent_jobs %}
+                <div class="recent-item {% if job.priority == 'urgent' %}urgent{% elif job.priority == 'high' %}high{% endif %}">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ job.job_number }}</strong>
+                        <span class="badge bg-{{ job.status|default:'secondary' }}">{{ job.get_status_display }}</span>
+                    </div>
+                    <div class="text-muted small">{{ job.customer.full_name }}</div>
+                    <div class="small">{{ job.title|truncatechars:50 }}</div>
+                    <div class="text-muted small">{{ job.created_at|timesince }} ago</div>
+                </div>
+                {% empty %}
+                <p class="text-muted">No recent jobs</p>
+                {% endfor %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'analytics:job_list' %}" class="btn btn-sm btn-outline-success">View All Jobs</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="chart-container">
+                <h5><i class="bi bi-alarm"></i> Upcoming Deadlines</h5>
+                {% for job in upcoming_deadlines %}
+                <div class="recent-item {% if job.is_overdue %}urgent{% else %}warning{% endif %}">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ job.job_number }}</strong>
+                        <span class="text-muted small">{{ job.due_date|date:"M d" }}</span>
+                    </div>
+                    <div class="text-muted small">{{ job.customer.full_name }}</div>
+                    <div class="small">{{ job.title|truncatechars:50 }}</div>
+                    <div class="text-muted small">
+                        {% if job.is_overdue %}
+                            <i class="bi bi-exclamation-triangle text-danger"></i> Overdue
+                        {% else %}
+                            Due {{ job.due_date|timeuntil }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">No upcoming deadlines</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Quotes Chart
+    const quotesCtx = document.getElementById('quotesChart').getContext('2d');
+    const quotesData = {{ quotes_chart_data|safe }};
+    
+    new Chart(quotesCtx, {
+        type: 'line',
+        data: {
+            labels: quotesData.map(item => new Date(item.date).toLocaleDateString()),
+            datasets: [{
+                label: 'Quote Requests',
+                data: quotesData.map(item => item.count),
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // Jobs Chart
+    const jobsCtx = document.getElementById('jobsChart').getContext('2d');
+    const jobsData = {{ jobs_chart_data|safe }};
+    
+    new Chart(jobsCtx, {
+        type: 'line',
+        data: {
+            labels: jobsData.map(item => new Date(item.date).toLocaleDateString()),
+            datasets: [{
+                label: 'Jobs Created',
+                data: jobsData.map(item => item.count),
+                borderColor: '#51cf66',
+                backgroundColor: 'rgba(81, 207, 102, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

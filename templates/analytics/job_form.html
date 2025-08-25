@@ -1,0 +1,513 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if job %}Edit Job{% else %}New Job{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .section-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .quote-reference {
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .progress-input {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="bi bi-{% if job %}pencil{% else %}briefcase-plus{% endif %}"></i>
+                    {% if job %}Edit Job #{{ job.job_number }}{% else %}New Job{% endif %}
+                </h1>
+                <a href="{% if job %}{% url 'analytics:job_detail' job.pk %}{% else %}{% url 'analytics:job_list' %}{% endif %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="jobForm">
+        {% csrf_token %}
+        
+        <!-- Quote Reference (if creating from quote) -->
+        {% if from_quote or job.quote %}
+        <div class="quote-reference">
+            <h5><i class="bi bi-file-text"></i> Quote Reference</h5>
+            <p><strong>Quote #{{ from_quote.quote_number|default:job.quote.quote_number }}:</strong> 
+               {{ from_quote.title|default:job.quote.title }}</p>
+            <p><strong>Amount:</strong> ${{ from_quote.amount|default:job.quote.amount }}</p>
+            <p><strong>Customer:</strong> {{ from_quote.customer.full_name|default:job.quote.customer.full_name }}</p>
+            {% if from_quote %}
+            <input type="hidden" name="quote_id" value="{{ from_quote.id }}">
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Customer Information -->
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-person"></i> Customer Information</h4>
+            </div>
+            
+            {% if from_quote %}
+            <!-- Customer is locked when creating from quote -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <strong>Customer:</strong> {{ from_quote.customer.full_name }} ({{ from_quote.customer.email }})
+                        <input type="hidden" name="customer" value="{{ from_quote.customer.id }}">
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label for="customer" class="form-label">Customer *</label>
+                        <select class="form-select" id="customer" name="customer" required>
+                            <option value="">Select a customer...</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}" 
+                                    {% if job and job.customer.id == customer.id %}selected{% endif %}>
+                                {{ customer.full_name }} - {{ customer.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Quick Actions</label>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#newCustomerModal">
+                                <i class="bi bi-person-plus"></i> New Customer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Job Details -->
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-briefcase"></i> Job Details</h4>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Job Title *</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{% if job %}{{ job.title }}{% elif from_quote %}{{ from_quote.title }}{% endif %}" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="service_type" class="form-label">Service Type *</label>
+                        <select class="form-select" id="service_type" name="service_type" required>
+                            <option value="">Select service...</option>
+                            <option value="consulting" {% if job and job.service_type == 'consulting' or from_quote and from_quote.service_type == 'consulting' %}selected{% endif %}>Consulting</option>
+                            <option value="installation" {% if job and job.service_type == 'installation' or from_quote and from_quote.service_type == 'installation' %}selected{% endif %}>Installation</option>
+                            <option value="maintenance" {% if job and job.service_type == 'maintenance' or from_quote and from_quote.service_type == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                            <option value="repair" {% if job and job.service_type == 'repair' or from_quote and from_quote.service_type == 'repair' %}selected{% endif %}>Repair</option>
+                            <option value="training" {% if job and job.service_type == 'training' or from_quote and from_quote.service_type == 'training' %}selected{% endif %}>Training</option>
+                            <option value="other" {% if job and job.service_type == 'other' or from_quote and from_quote.service_type == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority">
+                            <option value="normal" {% if job and job.priority == 'normal' or from_quote and from_quote.priority == 'normal' %}selected{% endif %}>Normal</option>
+                            <option value="high" {% if job and job.priority == 'high' or from_quote and from_quote.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="urgent" {% if job and job.priority == 'urgent' or from_quote and from_quote.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="pending" {% if job and job.status == 'pending' %}selected{% elif not job %}selected{% endif %}>Pending</option>
+                            <option value="in_progress" {% if job and job.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="on_hold" {% if job and job.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                            <option value="completed" {% if job and job.status == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="cancelled" {% if job and job.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="assigned_to" class="form-label">Assign To</label>
+                        <select class="form-select" id="assigned_to" name="assigned_to">
+                            <option value="">Unassigned</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}" {% if job and job.assigned_to.id == user.id %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{% if job and job.start_date %}{{ job.start_date|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="due_date" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="due_date" name="due_date" 
+                               value="{% if job and job.due_date %}{{ job.due_date|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location" 
+                               value="{% if job %}{{ job.location }}{% elif from_quote %}{{ from_quote.location }}{% endif %}" 
+                               placeholder="Job location/address">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="quoted_amount" class="form-label">Quoted Amount</label>
+                        <input type="number" class="form-control" id="quoted_amount" name="quoted_amount" 
+                               value="{% if job %}{{ job.quoted_amount }}{% elif from_quote %}{{ from_quote.amount }}{% endif %}" 
+                               min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="final_amount" class="form-label">Final Amount</label>
+                        <input type="number" class="form-control" id="final_amount" name="final_amount" 
+                               value="{% if job %}{{ job.final_amount }}{% endif %}" 
+                               min="0" step="0.01">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="4" 
+                          placeholder="Detailed description of the work to be performed...">{% if job %}{{ job.description }}{% elif from_quote %}{{ from_quote.description }}{% endif %}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="special_requirements" class="form-label">Special Requirements</label>
+                <textarea class="form-control" id="special_requirements" name="special_requirements" rows="3" 
+                          placeholder="Any special requirements, materials, or conditions...">{% if job %}{{ job.special_requirements }}{% elif from_quote %}{{ from_quote.special_requirements }}{% endif %}</textarea>
+            </div>
+        </div>
+
+        <!-- Progress Tracking -->
+        {% if job %}
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-graph-up"></i> Progress Tracking</h4>
+            </div>
+            
+            <div class="progress-input">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="progress_percentage" class="form-label">Progress Percentage</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="progress_percentage" name="progress_percentage" 
+                                       value="{{ job.progress_percentage|default:0 }}" min="0" max="100" step="5">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="completion_date" class="form-label">Completion Date</label>
+                            <input type="date" class="form-control" id="completion_date" name="completion_date" 
+                                   value="{% if job.completion_date %}{{ job.completion_date|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="progress_notes" class="form-label">Progress Notes</label>
+                    <textarea class="form-control" id="progress_notes" name="progress_notes" rows="3" 
+                              placeholder="Add notes about current progress..."></textarea>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Attachments -->
+        <div class="form-section">
+            <div class="section-header">
+                <h4><i class="bi bi-paperclip"></i> Attachments</h4>
+            </div>
+            
+            <div class="mb-3">
+                <label for="attachments" class="form-label">Upload Files</label>
+                <input type="file" class="form-control" id="attachments" name="attachments" multiple 
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                <div class="form-text">You can upload multiple files (PDF, Word documents, images)</div>
+            </div>
+
+            {% if job and job.attachments.exists %}
+            <div class="mt-3">
+                <h6>Current Attachments</h6>
+                <div class="row">
+                    {% for attachment in job.attachments.all %}
+                    <div class="col-md-4 mb-2">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-file-earmark me-2"></i>
+                            <a href="{{ attachment.file.url }}" target="_blank" class="text-decoration-none">
+                                {{ attachment.filename|truncatechars:30 }}
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
+                                    onclick="removeAttachment({{ attachment.id }})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="btn-group">
+                        <button type="submit" name="action" value="save" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Job
+                        </button>
+                        {% if not job %}
+                        <button type="submit" name="action" value="save_and_start" class="btn btn-success">
+                            <i class="bi bi-play-circle"></i> Save & Start
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a href="{% if job %}{% url 'analytics:job_detail' job.pk %}{% else %}{% url 'analytics:job_list' %}{% endif %}" 
+                       class="btn btn-secondary me-2">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                    {% if job %}
+                    <a href="{% url 'analytics:job_detail' job.pk %}" class="btn btn-info">
+                        <i class="bi bi-eye"></i> View Job
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- New Customer Modal -->
+<div class="modal fade" id="newCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newCustomerForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">First Name *</label>
+                                <input type="text" class="form-control" name="first_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" name="last_name" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" name="email" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" name="phone">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Company</label>
+                        <input type="text" class="form-control" name="company">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="createCustomer()">Create Customer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-populate start date if creating new job
+    const startDate = document.getElementById('start_date');
+    if (!startDate.value && !document.querySelector('input[name="quote_id"]')) {
+        const today = new Date();
+        startDate.value = today.toISOString().split('T')[0];
+    }
+
+    // Status change handling
+    const statusSelect = document.getElementById('status');
+    const completionDateField = document.getElementById('completion_date');
+    const progressField = document.getElementById('progress_percentage');
+
+    statusSelect.addEventListener('change', function() {
+        if (this.value === 'completed') {
+            if (!completionDateField.value) {
+                const today = new Date();
+                completionDateField.value = today.toISOString().split('T')[0];
+            }
+            if (progressField && progressField.value < 100) {
+                progressField.value = 100;
+            }
+        } else if (this.value === 'cancelled') {
+            // Don't auto-set completion date for cancelled jobs
+        }
+    });
+
+    // Progress percentage validation
+    if (progressField) {
+        progressField.addEventListener('change', function() {
+            const value = parseInt(this.value);
+            if (value >= 100 && statusSelect.value !== 'completed') {
+                if (confirm('Progress is 100%. Would you like to mark this job as completed?')) {
+                    statusSelect.value = 'completed';
+                    if (!completionDateField.value) {
+                        const today = new Date();
+                        completionDateField.value = today.toISOString().split('T')[0];
+                    }
+                }
+            }
+        });
+    }
+
+    // Form validation
+    document.getElementById('jobForm').addEventListener('submit', function(e) {
+        const customer = document.getElementById('customer');
+        const title = document.getElementById('title').value.trim();
+        const serviceType = document.getElementById('service_type').value;
+
+        // Skip customer validation if creating from quote (customer is hidden)
+        if (customer && !customer.value) {
+            e.preventDefault();
+            alert('Please select a customer.');
+            return;
+        }
+
+        if (!title || !serviceType) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+            return;
+        }
+
+        // Validate dates
+        const startDate = document.getElementById('start_date').value;
+        const dueDate = document.getElementById('due_date').value;
+        
+        if (startDate && dueDate && new Date(startDate) > new Date(dueDate)) {
+            e.preventDefault();
+            alert('Start date cannot be after due date.');
+            return;
+        }
+
+        // Validate amounts
+        const quotedAmount = parseFloat(document.getElementById('quoted_amount').value) || 0;
+        const finalAmount = parseFloat(document.getElementById('final_amount').value) || 0;
+        
+        if (finalAmount > 0 && quotedAmount > 0 && finalAmount > quotedAmount * 2) {
+            if (!confirm('Final amount is significantly higher than quoted amount. Continue?')) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+});
+
+function createCustomer() {
+    const form = document.getElementById('newCustomerForm');
+    const formData = new FormData(form);
+    
+    // Here you would make an AJAX call to create the customer
+    // For now, we'll just close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('newCustomerModal'));
+    modal.hide();
+    
+    // In a real implementation, you'd add the new customer to the select
+    alert('Customer creation would be implemented here');
+}
+
+function removeAttachment(attachmentId) {
+    if (confirm('Are you sure you want to remove this attachment?')) {
+        // AJAX call to remove attachment
+        fetch(`/analytics/attachments/${attachmentId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

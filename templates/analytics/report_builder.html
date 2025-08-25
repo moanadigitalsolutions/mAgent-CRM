@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report Builder - mAgent CRM{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">📊 Report Builder</h1>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'analytics:reports_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list"></i> My Reports
+                    </a>
+                    <button type="button" class="btn btn-primary" onclick="generateReport()">
+                        <i class="fas fa-download"></i> Generate Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Available Fields -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Available Fields</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Drag fields to the report builder area</p>
+                    
+                    {% for field in available_fields %}
+                    <div class="field-selector" draggable="true" data-field="{{ field.name }}" data-type="{{ field.type }}">
+                        <strong>{{ field.label }}</strong>
+                        <br><small class="text-muted">{{ field.type|capfirst }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Builder -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Report Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Report Name -->
+                    <div class="mb-3">
+                        <label for="reportName" class="form-label">Report Name</label>
+                        <input type="text" class="form-control" id="reportName" placeholder="Enter report name">
+                    </div>
+
+                    <!-- Selected Fields -->
+                    <div class="mb-3">
+                        <label class="form-label">Selected Fields</label>
+                        <div class="drag-drop-area" id="selectedFields">
+                            <p class="text-muted">Drag fields here to include them in your report</p>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="mb-3">
+                        <label class="form-label">Filters</label>
+                        <div class="border rounded p-3">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="cityFilter" class="form-label">City</label>
+                                    <input type="text" class="form-control" id="cityFilter" placeholder="Filter by city">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="dateFilter" class="form-label">Created After</label>
+                                    <input type="date" class="form-control" id="dateFilter">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Format -->
+                    <div class="mb-3">
+                        <label class="form-label">Export Format</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="exportFormat" id="csvFormat" value="csv" checked>
+                            <label class="form-check-label" for="csvFormat">
+                                CSV (Comma Separated Values)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="exportFormat" id="excelFormat" value="excel">
+                            <label class="form-check-label" for="excelFormat">
+                                Excel (.xlsx)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div id="reportPreview">
+                        <p class="text-muted">Configure your report above to see a preview</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/report-builder.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeReportBuilder();
+    });
+</script>
+{% endblock %}

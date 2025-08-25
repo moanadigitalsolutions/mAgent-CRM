@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">{{ title }}</h1>
+                    <p class="text-muted mb-0">Confirm sending quote to customer</p>
+                </div>
+                <div class="btn-group">
+                    <a href="{% url 'analytics:quote_detail' quote.pk %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Quote
+                    </a>
+                </div>
+            </div>
+
+            <!-- Confirmation Card -->
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-envelope"></i> Send Quote Confirmation
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                You are about to send quote <strong>{{ quote.reference_number }}</strong> to the customer.
+                            </div>
+
+                            <!-- Quote Details Summary -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6>Quote Information</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Reference:</strong> {{ quote.reference_number }}</li>
+                                        <li><strong>Service:</strong> {{ quote.service_required }}</li>
+                                        <li><strong>Current Status:</strong> 
+                                            <span class="badge bg-{% if quote.status == 'pending' %}warning{% elif quote.status == 'sent' %}info{% elif quote.status == 'approved' %}success{% else %}secondary{% endif %}">
+                                                {{ quote.get_status_display }}
+                                            </span>
+                                        </li>
+                                        {% if quote.estimated_value %}
+                                        <li><strong>Estimated Value:</strong> ${{ quote.estimated_value }}</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Customer Information</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Name:</strong> {{ quote.customer.get_full_name }}</li>
+                                        <li><strong>Email:</strong> {{ quote.customer.email }}</li>
+                                        <li><strong>Phone:</strong> {{ quote.customer.phone|default:"Not provided" }}</li>
+                                        {% if quote.customer.company %}
+                                        <li><strong>Company:</strong> {{ quote.customer.company }}</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Action Details -->
+                            <div class="alert alert-warning">
+                                <h6><i class="bi bi-exclamation-triangle"></i> What will happen:</h6>
+                                <ul class="mb-0">
+                                    <li>Quote status will be updated to "Sent"</li>
+                                    <li>An email will be sent to {{ quote.customer.email }}</li>
+                                    <li>This action will be logged in the system</li>
+                                    <li>Automated follow-up emails may be triggered based on your settings</li>
+                                </ul>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'analytics:quote_detail' quote.pk %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                                <form method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-envelope"></i> Send Quote Now
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

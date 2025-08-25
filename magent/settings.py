@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "customers",
+    "analytics",
 ]
 
 # Attempt to include django-storages only if installed to avoid dev errors

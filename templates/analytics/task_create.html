@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Task{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'analytics:task_dashboard' %}">Tasks</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Create Task</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create New Task</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-3">
+                            <label for="title" class="form-label">Task Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4"></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="customer_id" class="form-label">Customer <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="customer_id" name="customer_id" required>
+                                        <option value="">Select Customer</option>
+                                        {% for customer in customers %}
+                                        <option value="{{ customer.id }}">{{ customer.first_name }} {{ customer.last_name }} ({{ customer.email }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="assigned_to_id" class="form-label">Assign To</label>
+                                    <select class="form-control" id="assigned_to_id" name="assigned_to_id">
+                                        <option value="">Unassigned</option>
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }} ({{ user.username }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="priority" class="form-label">Priority</label>
+                                    <select class="form-control" id="priority" name="priority">
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="due_date" class="form-label">Due Date</label>
+                                    <input type="datetime-local" class="form-control" id="due_date" name="due_date">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">Create Task</button>
+                            <a href="{% url 'analytics:task_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

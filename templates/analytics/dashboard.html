@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analytics Dashboard - mAgent CRM{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">📊 Analytics Dashboard</h1>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <a href="{% url 'analytics:report_builder' %}" class="btn btn-primary">
+                        <i class="fas fa-chart-bar"></i> Create Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card analytics-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Total Customers</h5>
+                            <h2 class="metric-value">{{ metrics.total_customers.count|default:0 }}</h2>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card analytics-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">New Today</h5>
+                            <h2 class="metric-value">{{ metrics.new_customers_today.count|default:0 }}</h2>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-user-plus fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card analytics-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">This Week</h5>
+                            <h2 class="metric-value">{{ metrics.new_customers_week.count|default:0 }}</h2>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-calendar-week fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card analytics-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Active Customers</h5>
+                            <h2 class="metric-value">{{ metrics.active_customers.count|default:0 }}</h2>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-star fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Customer Acquisition Trends</h5>
+                    <div class="card-tools">
+                        <select id="trendsPeriod" class="form-select form-select-sm" onchange="updateTrendsChart()">
+                            <option value="7">Last 7 days</option>
+                            <option value="30" selected>Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Cities</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="citiesChart" width="300" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Lead Score Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="leadScoreChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Engagement Levels</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="engagementChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats Row -->
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Average Engagement</h5>
+                    <h3 class="text-primary">{{ metrics.engagement_rate.rate|default:0|floatformat:1 }}%</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Profile Completeness</h5>
+                    <h3 class="text-success">{{ metrics.avg_profile_completeness.percentage|default:0|floatformat:1 }}%</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">This Month</h5>
+                    <h3 class="text-info">{{ metrics.new_customers_month.count|default:0 }}</h3>
+                    <small class="text-muted">New Customers</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/analytics.js' %}"></script>
+<script>
+    // Initialize charts when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeAnalyticsDashboard();
+    });
+</script>
+{% endblock %}
