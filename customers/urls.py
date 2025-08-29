@@ -30,6 +30,11 @@ urlpatterns = [
     path('customers/<int:pk>/check-duplicates/', views.check_customer_duplicates, name='check_customer_duplicates'),
     path('customers/<int:pk>/ignore-duplicate/', views.ignore_duplicate, name='ignore_duplicate'),
     
+    # Merge functionality
+    path('customers/merge/<int:primary_id>/<int:duplicate_id>/preview/', views.merge_customers_preview, name='merge_customers_preview'),
+    path('customers/merge/<int:primary_id>/<int:duplicate_id>/perform/', views.perform_customer_merge, name='perform_customer_merge'),
+    path('customers/merge/history/', views.merge_history, name='merge_history'),
+    
     # Validation endpoints
     path('validate/email/', views.validate_email, name='validate_email'),
     path('validate/mobile/', views.validate_mobile, name='validate_mobile'),

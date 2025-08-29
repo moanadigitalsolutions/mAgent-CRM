@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Merge History - mAgent{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="Breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">Customers</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'customers:duplicate_detection' %}">Duplicate Detection</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Merge History</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0">Merge History</h1>
+        <p class="text-muted mb-0">Audit trail of all customer merge operations</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:duplicate_detection' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Duplicates
+        </a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h3 class="text-info mb-1">{{ total_merges }}</h3>
+                <p class="text-muted mb-0">Total Merges</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h3 class="text-success mb-1">{{ page_obj.paginator.count }}</h3>
+                <p class="text-muted mb-0">Records Processed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h3 class="text-warning mb-1">{{ page_obj|length }}</h3>
+                <p class="text-muted mb-0">This Page</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Merge Records -->
+{% if page_obj %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-clock-history"></i> Merge Operations
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Action</th>
+                        <th>Primary Customer</th>
+                        <th>Duplicate Customer</th>
+                        <th>Performed By</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for merge in page_obj %}
+                    <tr>
+                        <td>
+                            <div class="small">
+                                <strong>{{ merge.performed_at|date:"M d, Y" }}</strong><br>
+                                {{ merge.performed_at|time:"H:i" }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if merge.action_taken == 'merge' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Merged
+                                </span>
+                            {% elif merge.action_taken == 'ignore' %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-x-circle"></i> Ignored
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-dash-circle"></i> {{ merge.get_action_taken_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'customers:customer_detail' merge.primary_customer.id %}" class="text-decoration-none">
+                                {{ merge.primary_customer.full_name }}
+                            </a>
+                            <div class="small text-muted">{{ merge.primary_customer.email }}</div>
+                        </td>
+                        <td>
+                            {% if merge.duplicate_customer.is_active %}
+                                <a href="{% url 'customers:customer_detail' merge.duplicate_customer.id %}" class="text-decoration-none">
+                                    {{ merge.duplicate_customer.full_name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">
+                                    {{ merge.duplicate_customer.full_name }}
+                                    <small class="text-danger">(Inactive)</small>
+                                </span>
+                            {% endif %}
+                            <div class="small text-muted">{{ merge.duplicate_customer.email }}</div>
+                        </td>
+                        <td>
+                            {{ merge.performed_by.get_full_name|default:merge.performed_by.username }}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="showMergeDetails({{ merge.id }})">
+                                <i class="bi bi-info-circle"></i> Details
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+    <nav aria-label="Merge history pagination">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    Next <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% else %}
+<!-- No Merges Found -->
+<div class="card border-success">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+        <h4 class="text-success">No Merge History</h4>
+        <p class="text-muted mb-4">No customer merge operations have been performed yet.</p>
+        <a href="{% url 'customers:duplicate_detection' %}" class="btn btn-success">
+            <i class="bi bi-search"></i> Check for Duplicates
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Merge Details Modal -->
+<div class="modal fade" id="mergeDetailsModal" tabindex="-1" aria-labelledby="mergeDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mergeDetailsModalLabel">
+                    <i class="bi bi-info-circle"></i> Merge Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="merge-details-content">
+                <!-- Details will be loaded here -->
+                <div class="text-center py-4">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading details...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showMergeDetails(mergeId) {
+    const modal = new bootstrap.Modal(document.getElementById('mergeDetailsModal'));
+    const content = document.getElementById('merge-details-content');
+
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading details...</span>
+            </div>
+            <p class="mt-2">Loading merge details...</p>
+        </div>
+    `;
+
+    modal.show();
+
+    // In a real implementation, you would fetch details from an API endpoint
+    // For now, show a placeholder
+    setTimeout(() => {
+        content.innerHTML = `
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                Detailed merge information would be displayed here, including:
+            </div>
+            <ul class="list-unstyled">
+                <li><i class="bi bi-check text-success"></i> Field-by-field merge decisions</li>
+                <li><i class="bi bi-check text-success"></i> Files transferred</li>
+                <li><i class="bi bi-check text-success"></i> Notes and tags merged</li>
+                <li><i class="bi bi-check text-success"></i> Conflict resolution details</li>
+                <li><i class="bi bi-check text-success"></i> Timestamp and user information</li>
+            </ul>
+            <div class="small text-muted mt-3">
+                <strong>Merge ID:</strong> ${mergeId}
+            </div>
+        `;
+    }, 1000);
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
+}
+</script>
+{% endblock %}

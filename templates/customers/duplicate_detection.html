@@ -16,6 +16,11 @@
         <p class="text-muted mb-0">Identify and manage potential duplicate customer records</p>
     </div>
     <div>
+        <div class="btn-group me-2" role="group">
+            <a href="{% url 'customers:merge_history' %}" class="btn btn-outline-info">
+                <i class="bi bi-clock-history"></i> Merge History
+            </a>
+        </div>
         <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to Customers
         </a>
@@ -131,14 +136,17 @@
                 <div class="col-12">
                     <div class="border-top pt-3">
                         <h6 class="mb-2">Actions:</h6>
-                        <div class="btn-group" role="group">
+                            <div class="btn-group" role="group">
                             <button type="button" class="btn btn-outline-success btn-sm" onclick="reviewGroup({{ forloop.counter0 }})">
                                 <i class="bi bi-eye"></i> Review Group
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="previewMerge({{ group.primary_customer.id }}, {{ group.duplicates.0.customer.id }})">
+                                <i class="bi bi-arrows-merge"></i> Merge Records
                             </button>
                             <button type="button" class="btn btn-outline-warning btn-sm" onclick="ignoreGroup({{ forloop.counter0 }})">
                                 <i class="bi bi-x-circle"></i> Ignore Group
                             </button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="compareCustomers({{ group.primary_customer.id }}, {{ group.duplicates.0.customer.id }})">
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="compareCustomers({{ group.primary_customer.id }}, {{ group.duplicates.0.customer.id }})">
                                 <i class="bi bi-arrows-angle-expand"></i> Compare Records
                             </button>
                         </div>
@@ -207,10 +215,15 @@ function ignoreGroup(groupIndex) {
     }
 }
 
+function previewMerge(primaryId, duplicateId) {
+    // Redirect to merge preview page
+    window.location.href = `/customers/merge/${primaryId}/${duplicateId}/preview/`;
+}
+
 function compareCustomers(primaryId, duplicateId) {
     const modal = new bootstrap.Modal(document.getElementById('compareModal'));
     const content = document.getElementById('compare-content');
-    
+
     content.innerHTML = `
         <div class="text-center py-4">
             <div class="spinner-border" role="status">
@@ -219,9 +232,9 @@ function compareCustomers(primaryId, duplicateId) {
             <p class="mt-2">Loading customer comparison...</p>
         </div>
     `;
-    
+
     modal.show();
-    
+
     // Simulate loading comparison data
     setTimeout(() => {
         content.innerHTML = `
@@ -253,9 +266,9 @@ function showNotification(message, type) {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         if (notification.parentNode) {
             notification.remove();

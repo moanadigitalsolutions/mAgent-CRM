@@ -1061,3 +1061,122 @@ def validate_postcode(request):
         })
     
     return JsonResponse({'valid': True, 'message': 'Postcode is valid'})
+
+
+@login_required
+def merge_customers_preview(request, primary_id, duplicate_id):
+    """Preview customer merge with data combination options."""
+    if request.user.groups.filter(name='ReadOnly').exists():
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    try:
+        primary_customer = get_object_or_404(Customer, pk=primary_id)
+        duplicate_customer = get_object_or_404(Customer, pk=duplicate_id)
+
+        from .utils import (
+            combine_customer_data,
+            merge_customer_files,
+            merge_customer_notes,
+            merge_customer_tags
+        )
+
+        # Get combined data preview
+        combined_data, merge_details = combine_customer_data(primary_customer, duplicate_customer)
+
+        # Get file, note, and tag information
+        file_info = merge_customer_files(primary_customer, duplicate_customer)
+        note_info = merge_customer_notes(primary_customer, duplicate_customer)
+        tag_info = merge_customer_tags(primary_customer, duplicate_customer)
+
+        context = {
+            'primary_customer': primary_customer,
+            'duplicate_customer': duplicate_customer,
+            'combined_data': combined_data,
+            'merge_details': merge_details,
+            'file_info': file_info,
+            'note_info': note_info,
+            'tag_info': tag_info,
+            'field_options': {
+                'first_name': 'First Name',
+                'last_name': 'Last Name',
+                'email': 'Email',
+                'mobile': 'Mobile',
+                'street_address': 'Street Address',
+                'suburb': 'Suburb',
+                'city': 'City',
+                'postcode': 'Postcode',
+            }
+        }
+
+        return render(request, 'customers/merge_preview.html', context)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def perform_customer_merge(request, primary_id, duplicate_id):
+    """Perform the actual customer merge operation."""
+    if request.user.groups.filter(name='ReadOnly').exists():
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    try:
+        primary_customer = get_object_or_404(Customer, pk=primary_id)
+        duplicate_customer = get_object_or_404(Customer, pk=duplicate_id)
+
+        # Get field selections from POST data
+        field_selections = {}
+        for key, value in request.POST.items():
+            if key.startswith('field_'):
+                field_name = key.replace('field_', '')
+                field_selections[field_name] = value
+
+        # Get merge notes
+        notes = request.POST.get('merge_notes', '')
+
+        # Perform the merge
+        from .utils import perform_customer_merge as do_merge
+        success, merge_record, error = do_merge(
+            primary_customer, duplicate_customer,
+            field_selections, request.user, notes
+        )
+
+        if success:
+            return JsonResponse({
+                'success': True,
+                'message': f'Successfully merged {duplicate_customer.full_name} into {primary_customer.full_name}',
+                'merge_record_id': merge_record.id
+            })
+        else:
+            return JsonResponse({'success': False, 'error': error}, status=500)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def merge_history(request):
+    """View merge history and audit trail."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    from .models import DuplicateMerge
+    from django.core.paginator import Paginator
+
+    # Get all merge records
+    merges = DuplicateMerge.objects.select_related(
+        'primary_customer', 'duplicate_customer', 'performed_by'
+    ).order_by('-performed_at')
+
+    # Pagination
+    paginator = Paginator(merges, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'total_merges': merges.count(),
+    }
+
+    return render(request, 'customers/merge_history.html', context)

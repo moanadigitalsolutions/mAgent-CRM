@@ -224,3 +224,62 @@ class CustomerNote(models.Model):
         
     def __str__(self):
         return f"{self.customer} - {self.get_note_type_display()} ({self.created_at.strftime('%Y-%m-%d')})"
+
+
+class DuplicateMerge(models.Model):
+    """Track customer merge operations for audit and rollback purposes"""
+
+    MERGE_ACTIONS = [
+        ('merge', 'Merge Records'),
+        ('ignore', 'Mark as Not Duplicate'),
+        ('delete', 'Delete Duplicate'),
+    ]
+
+    primary_customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='duplicate_merges_as_primary',
+        help_text="The customer record that will be kept"
+    )
+    duplicate_customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='duplicate_merges_as_duplicate',
+        help_text="The customer record that will be merged/deleted"
+    )
+
+    action_taken = models.CharField(
+        max_length=20,
+        choices=MERGE_ACTIONS,
+        default='merge',
+        help_text="What action was taken with the duplicate"
+    )
+
+    merged_data = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="JSON data showing what fields were merged and from which record"
+    )
+
+    notes = models.TextField(
+        blank=True,
+        help_text="Optional notes about the merge decision"
+    )
+
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='duplicate_merges_performed'
+    )
+
+    performed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-performed_at']
+        verbose_name = "Duplicate Merge"
+        verbose_name_plural = "Duplicate Merges"
+        unique_together = ['primary_customer', 'duplicate_customer']
+
+    def __str__(self):
+        return f"Merge: {self.duplicate_customer} → {self.primary_customer} ({self.get_action_taken_display()})"

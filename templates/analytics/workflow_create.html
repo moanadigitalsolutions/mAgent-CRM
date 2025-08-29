@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Workflow Template - Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .workflow-form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid #007bff;
+    }
+    .form-section h5 {
+        color: #495057;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    .trigger-type-info {
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    .trigger-description {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+    .btn-create {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px 8px 0 0 !important;
+    }
+    .icon-wrapper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        margin-right: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="workflow-form-container">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="bi bi-plus-circle"></i> Create Workflow Template</h1>
+                        <p class="text-muted mb-0">Build automated processes to streamline your business operations</p>
+                    </div>
+                    <a href="{% url 'analytics:workflow_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Workflows
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Form Card -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-gear fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0">Workflow Configuration</h5>
+                        <small class="opacity-75">Define the basic settings for your workflow</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information Section -->
+                    <div class="form-section">
+                        <h5><i class="bi bi-info-circle"></i> Basic Information</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Workflow Name *</label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           placeholder="Enter a descriptive name for your workflow" required>
+                                    <div class="form-text">Choose a clear, descriptive name that explains what this workflow does.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="is_active" class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                        <label class="form-check-label" for="is_active">
+                                            Active (Workflow will run automatically)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Describe what this workflow does and when it should be used"></textarea>
+                            <div class="form-text">Provide details about the workflow's purpose and functionality.</div>
+                        </div>
+                    </div>
+
+                    <!-- Trigger Configuration Section -->
+                    <div class="form-section">
+                        <h5><i class="bi bi-lightning"></i> Trigger Configuration</h5>
+                        
+                        <div class="mb-3">
+                            <label for="trigger_type" class="form-label">When should this workflow run?</label>
+                            <select class="form-select" id="trigger_type" name="trigger_type" required>
+                                {% for value, label in trigger_choices %}
+                                <option value="{{ value }}" {% if value == 'manual' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="trigger-type-info">
+                                <div id="trigger-description">
+                                    <strong>Manual Trigger:</strong> This workflow will only run when manually started by a user.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'analytics:workflow_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-create">
+                            <i class="bi bi-check-circle"></i> Create Workflow
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-lightbulb"></i> Workflow Tips</h6>
+                    <ul class="mb-0">
+                        <li><strong>Start Simple:</strong> Begin with basic workflows and add complexity as needed</li>
+                        <li><strong>Test First:</strong> Always test your workflow with sample data before activating</li>
+                        <li><strong>Monitor Performance:</strong> Review workflow execution logs regularly</li>
+                        <li><strong>Keep Updated:</strong> Maintain and update workflows as your business processes evolve</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const triggerSelect = document.getElementById('trigger_type');
+    const triggerDescription = document.getElementById('trigger-description');
+    
+    const triggerDescriptions = {
+        'manual': 'This workflow will only run when manually started by a user.',
+        'customer_created': 'This workflow will automatically run whenever a new customer is added to the system.',
+        'note_added': 'This workflow will trigger when a note is added to any customer record.',
+        'file_uploaded': 'This workflow will run when a file is uploaded to a customer record.',
+        'task_completed': 'This workflow will trigger when a task is marked as completed.',
+        'email_opened': 'This workflow will run when a customer opens an email from your campaigns.',
+        'email_clicked': 'This workflow will trigger when a customer clicks a link in your emails.',
+        'date_based': 'This workflow will run based on specific dates or time intervals.',
+    };
+    
+    function updateTriggerDescription() {
+        const selectedValue = triggerSelect.value;
+        const description = triggerDescriptions[selectedValue] || 'Select a trigger type to see its description.';
+        const triggerLabel = triggerSelect.options[triggerSelect.selectedIndex].text;
+        
+        triggerDescription.innerHTML = `<strong>${triggerLabel}:</strong> ${description}`;
+    }
+    
+    triggerSelect.addEventListener('change', updateTriggerDescription);
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const nameInput = document.getElementById('name');
+        
+        if (!nameInput.value.trim()) {
+            e.preventDefault();
+            nameInput.focus();
+            nameInput.classList.add('is-invalid');
+            
+            // Remove existing feedback
+            const existingFeedback = nameInput.parentNode.querySelector('.invalid-feedback');
+            if (existingFeedback) {
+                existingFeedback.remove();
+            }
+            
+            // Add error feedback
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            feedback.textContent = 'Please enter a workflow name.';
+            nameInput.parentNode.appendChild(feedback);
+        }
+    });
+    
+    // Remove validation styling on input
+    document.getElementById('name').addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+        const feedback = this.parentNode.querySelector('.invalid-feedback');
+        if (feedback) {
+            feedback.remove();
+        }
+    });
+    
+    // Character counter for description
+    const descriptionTextarea = document.getElementById('description');
+    const maxLength = 500;
+    
+    const counterDiv = document.createElement('div');
+    counterDiv.className = 'form-text text-end';
+    counterDiv.innerHTML = `<span id="char-count">0</span>/${maxLength} characters`;
+    descriptionTextarea.parentNode.appendChild(counterDiv);
+    
+    descriptionTextarea.addEventListener('input', function() {
+        const count = this.value.length;
+        document.getElementById('char-count').textContent = count;
+        
+        if (count > maxLength * 0.9) {
+            counterDiv.classList.add('text-warning');
+        } else {
+            counterDiv.classList.remove('text-warning');
+        }
+        
+        if (count >= maxLength) {
+            counterDiv.classList.add('text-danger');
+            counterDiv.classList.remove('text-warning');
+        } else {
+            counterDiv.classList.remove('text-danger');
+        }
+    });
+    
+    // Auto-focus on name field
+    document.getElementById('name').focus();
+});
+</script>
+{% endblock %}

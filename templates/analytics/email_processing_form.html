@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load analytics_extras %}
 
-{% block title %}Process Email{% endblock %}
+{% block title %}Process Email - Analytics{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -86,7 +87,7 @@
                 <div class="detected-info">
                     <strong>Email Type:</strong> 
                     <span class="badge bg-{% if detection_results.type == 'quote_request' %}primary{% elif detection_results.type == 'job_update' %}info{% else %}secondary{% endif %}">
-                        {{ detection_results.type|title|replace:"_":" " }}
+                        {{ detection_results.type|title|replace_underscore }}
                     </span>
                 </div>
                 {% endif %}
@@ -344,7 +345,7 @@
                                 <td>{{ item.sender_email }}</td>
                                 <td>
                                     <span class="badge bg-{% if item.email_type == 'quote_request' %}primary{% elif item.email_type == 'job_update' %}info{% else %}secondary{% endif %}">
-                                        {{ item.email_type|title|replace:"_":" " }}
+                                        {{ item.email_type|title|replace_underscore }}
                                     </span>
                                 </td>
                                 <td>

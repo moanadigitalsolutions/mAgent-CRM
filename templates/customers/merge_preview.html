@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static customer_extras %}
+
+{% block title %}Merge Customers - mAgent{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="Breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">Customers</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'customers:duplicate_detection' %}">Duplicate Detection</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Merge Preview</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0">Merge Customer Records</h1>
+        <p class="text-muted mb-0">Review and combine data from duplicate customer records</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:duplicate_detection' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Duplicates
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Primary Customer -->
+    <div class="col-lg-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary bg-opacity-10 border-primary">
+                <h5 class="mb-0 text-primary">
+                    <i class="bi bi-person-circle"></i> Primary Record (Will Be Kept)
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-title">{{ primary_customer.full_name }}</h6>
+                <div class="customer-details">
+                    <p class="mb-1"><i class="bi bi-envelope text-muted"></i> {{ primary_customer.email }}</p>
+                    <p class="mb-1"><i class="bi bi-telephone text-muted"></i> {{ primary_customer.mobile }}</p>
+                    <p class="mb-1"><i class="bi bi-geo-alt text-muted"></i> {{ primary_customer.full_address }}</p>
+                    <p class="mb-0"><small class="text-muted">Created: {{ primary_customer.created_at|date:"M d, Y" }}</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Duplicate Customer -->
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger bg-opacity-10 border-danger">
+                <h5 class="mb-0 text-danger">
+                    <i class="bi bi-person-dash"></i> Duplicate Record (Will Be Merged)
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-title">{{ duplicate_customer.full_name }}</h6>
+                <div class="customer-details">
+                    <p class="mb-1"><i class="bi bi-envelope text-muted"></i> {{ duplicate_customer.email }}</p>
+                    <p class="mb-1"><i class="bi bi-telephone text-muted"></i> {{ duplicate_customer.mobile }}</p>
+                    <p class="mb-1"><i class="bi bi-geo-alt text-muted"></i> {{ duplicate_customer.full_address }}</p>
+                    <p class="mb-0"><small class="text-muted">Created: {{ duplicate_customer.created_at|date:"M d, Y" }}</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Combination Form -->
+<form id="mergeForm" method="post" action="{% url 'customers:perform_customer_merge' primary_customer.id duplicate_customer.id %}">
+    {% csrf_token %}
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-arrows-merge"></i> Data Combination Options
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Choose which data to keep for each field. Fields with conflicts are highlighted.
+            </p>
+
+            <div class="row">
+                {% for field_name, field_label in field_options.items %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">{{ field_label }}</label>
+                    {% if field_name in merge_details.conflicts_resolved %}
+                        {% for conflict in merge_details.conflicts_resolved %}
+                            {% if conflict.field == field_name %}
+                            <div class="border border-warning rounded p-3 bg-warning bg-opacity-10">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="field_{{ field_name }}"
+                                           id="primary_{{ field_name }}" value="primary" checked>
+                                    <label class="form-check-label" for="primary_{{ field_name }}">
+                                        <strong>Primary:</strong> {{ conflict.primary_value|default:"(empty)" }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="field_{{ field_name }}"
+                                           id="duplicate_{{ field_name }}" value="duplicate">
+                                    <label class="form-check-label" for="duplicate_{{ field_name }}">
+                                        <strong>Duplicate:</strong> {{ conflict.duplicate_value|default:"(empty)" }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted small">
+                            <i class="bi bi-check-circle text-success"></i>
+                            No conflict - using: {{ combined_data|get_item:field_name|default:"(empty)" }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Data Preview -->
+    <div class="row mt-4">
+        <!-- Files -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-file-earmark"></i> Files
+                        {% if file_info.files_to_transfer %}
+                        <span class="badge bg-info">{{ file_info.files_to_transfer|length }}</span>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if file_info.duplicate_files %}
+                        <p class="small text-muted mb-2">Files to be transferred:</p>
+                        <ul class="list-unstyled small">
+                            {% for file in file_info.files_to_transfer %}
+                            <li><i class="bi bi-file-earmark"></i> {{ file.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0">No additional files to transfer</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-sticky"></i> Notes
+                        {% if note_info.notes_to_transfer %}
+                        <span class="badge bg-info">{{ note_info.notes_to_transfer }}</span>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if note_info.duplicate_notes_count %}
+                        <p class="small text-muted mb-0">
+                            {{ note_info.duplicate_notes_count }} notes will be transferred
+                        </p>
+                        {% if note_info.oldest_note_date %}
+                        <p class="small text-muted mb-0">
+                            From {{ note_info.oldest_note_date|date:"M d, Y" }} to {{ note_info.newest_note_date|date:"M d, Y" }}
+                        </p>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted small mb-0">No additional notes to transfer</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-tags"></i> Tags
+                        {% if tag_info.tags_to_add %}
+                        <span class="badge bg-info">{{ tag_info.tags_to_add|length }}</span>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if tag_info.tags_to_add %}
+                        <p class="small text-muted mb-2">Tags to be added:</p>
+                        <div>
+                            {% for tag in tag_info.tags_to_add %}
+                            <span class="badge bg-secondary me-1">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted small mb-0">No additional tags to add</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Merge Notes -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="bi bi-pencil-square"></i> Merge Notes (Optional)
+            </h6>
+        </div>
+        <div class="card-body">
+            <textarea class="form-control" name="merge_notes" rows="3"
+                      placeholder="Add any notes about this merge decision..."></textarea>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'customers:duplicate_detection' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> Cancel
+        </a>
+        <div>
+            <button type="button" class="btn btn-success" onclick="performMerge()">
+                <i class="bi bi-check-circle"></i> Perform Merge
+            </button>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script id="field-options" type="application/json">
+{{ field_options|escapejs }}
+</script>
+<script>
+const fieldOptions = JSON.parse(document.getElementById('field-options').textContent);
+
+function performMerge() {
+    if (confirm('Are you sure you want to merge these customer records? This action cannot be undone.')) {
+        const form = document.getElementById('mergeForm');
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                setTimeout(() => {
+                    window.location.href = "{% url 'customers:duplicate_detection' %}";
+                }, 2000);
+            } else {
+                showNotification(data.error || 'Merge failed', 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('An error occurred during merge', 'error');
+        });
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
+}
+</script>
+{% endblock %}

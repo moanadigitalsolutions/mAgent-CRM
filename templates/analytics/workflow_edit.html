@@ -1,0 +1,522 @@
+{% extends 'base.html' %}
+{% load analytics_extras %}
+
+{% block title %}Edit Workflow - {{ workflow.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .workflow-edit-container {
+        min-height: 90vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 0;
+    }
+    
+    .edit-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        border: none;
+        margin-bottom: 2rem;
+    }
+    
+    .edit-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px 20px 0 0;
+        padding: 2rem;
+        margin: 0;
+    }
+    
+    .edit-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+    
+    .edit-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .form-section {
+        padding: 2rem;
+    }
+    
+    .form-section h3 {
+        color: #4a5568;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .form-control {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    
+    .form-select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+        appearance: none;
+    }
+    
+    .character-counter {
+        font-size: 0.875rem;
+        color: #6b7280;
+        text-align: right;
+        margin-top: 0.25rem;
+    }
+    
+    .character-counter.warning {
+        color: #f59e0b;
+    }
+    
+    .character-counter.danger {
+        color: #ef4444;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+    
+    .trigger-description {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    .trigger-description.show {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+        background: #6b7280;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+        background: #4b5563;
+        transform: translateY(-2px);
+    }
+    
+    .action-buttons {
+        padding: 2rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 0 0 20px 20px;
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+        margin-bottom: 1rem;
+    }
+    
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "›";
+        color: rgba(255,255,255,0.7);
+        font-weight: bold;
+    }
+    
+    .breadcrumb-item a {
+        color: rgba(255,255,255,0.9);
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: white;
+    }
+    
+    .breadcrumb-item.active {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .alert {
+        border-radius: 12px;
+        border: none;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-warning {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+    }
+    
+    .alert-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+    }
+    
+    .form-check {
+        margin-bottom: 1rem;
+    }
+    
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.125rem;
+        margin-right: 0.75rem;
+        accent-color: #667eea;
+    }
+    
+    .form-check-label {
+        font-weight: 500;
+        color: #374151;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="workflow-edit-container">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'analytics:workflow_list' %}">Workflows</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'analytics:workflow_detail' workflow.id %}">{{ workflow.name }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </nav>
+        
+        <div class="edit-card">
+            <div class="edit-header">
+                <h1>Edit Workflow</h1>
+                <p>Modify your workflow configuration and settings</p>
+            </div>
+            
+            {% if messages %}
+                <div class="form-section" style="padding-bottom: 0;">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <form method="post" id="workflowEditForm">
+                {% csrf_token %}
+                
+                <!-- Basic Information Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-info-circle me-2"></i>Basic Information</h3>
+                    
+                    <div class="form-group">
+                        <label for="id_name" class="form-label">Workflow Name *</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="id_name" 
+                               name="name" 
+                               value="{{ form.name.value|default:workflow.name }}"
+                               maxlength="200" 
+                               required>
+                        <div class="character-counter" id="nameCounter">
+                            <span id="nameCount">{{ form.name.value|default:workflow.name|length }}</span>/200 characters
+                        </div>
+                        {% if form.name.errors %}
+                            <div class="text-danger mt-1">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_description" class="form-label">Description</label>
+                        <textarea class="form-control" 
+                                  id="id_description" 
+                                  name="description" 
+                                  rows="3" 
+                                  maxlength="1000"
+                                  placeholder="Describe what this workflow does...">{{ form.description.value|default:workflow.description }}</textarea>
+                        <div class="character-counter" id="descriptionCounter">
+                            <span id="descriptionCount">{{ form.description.value|default:workflow.description|length }}</span>/1000 characters
+                        </div>
+                        {% if form.description.errors %}
+                            <div class="text-danger mt-1">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_is_active" class="form-label">Status</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="id_is_active" 
+                                           name="is_active"
+                                           {% if form.is_active.value|default:workflow.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="id_is_active">
+                                        Active (workflow will run when triggered)
+                                    </label>
+                                </div>
+                                {% if form.is_active.errors %}
+                                    <div class="text-danger mt-1">{{ form.is_active.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Trigger Configuration Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-play me-2"></i>Trigger Configuration</h3>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Changing the trigger type may require updating your workflow actions to match the new trigger context.
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_trigger_type" class="form-label">Trigger Type *</label>
+                        <select class="form-control form-select" id="id_trigger_type" name="trigger_type" required>
+                            {% for value, label in form.trigger_type.field.choices %}
+                                <option value="{{ value }}" 
+                                        {% if value == form.trigger_type.value|default:workflow.trigger_type %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.trigger_type.errors %}
+                            <div class="text-danger mt-1">{{ form.trigger_type.errors.0 }}</div>
+                        {% endif %}
+                        
+                        <!-- Dynamic trigger descriptions -->
+                        <div id="trigger_customer_created" class="trigger-description">
+                            <strong>New Customer Created:</strong> This workflow will run automatically whenever a new customer is added to your system. Perfect for welcome emails, onboarding sequences, or initial data processing.
+                        </div>
+                        <div id="trigger_customer_updated" class="trigger-description">
+                            <strong>Customer Updated:</strong> Triggers when any customer information is modified. Useful for updating external systems, sending notifications, or maintaining data consistency.
+                        </div>
+                        <div id="trigger_email_received" class="trigger-description">
+                            <strong>Email Received:</strong> Activates when new emails are received. Great for auto-responses, ticket creation, or email categorization workflows.
+                        </div>
+                        <div id="trigger_scheduled" class="trigger-description">
+                            <strong>Scheduled:</strong> Runs at specific times or intervals. Perfect for reports, data cleanup, maintenance tasks, or recurring communications.
+                        </div>
+                        <div id="trigger_manual" class="trigger-description">
+                            <strong>Manual:</strong> Only runs when manually triggered by a user. Ideal for on-demand processes, data exports, or administrative tasks.
+                        </div>
+                        <div id="trigger_custom" class="trigger-description">
+                            <strong>Custom:</strong> Advanced trigger configuration for specific business logic or integration requirements.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_trigger_conditions" class="form-label">Trigger Conditions</label>
+                        <textarea class="form-control" 
+                                  id="id_trigger_conditions" 
+                                  name="trigger_conditions" 
+                                  rows="3" 
+                                  placeholder="Optional: Define specific conditions that must be met for this workflow to trigger...">{{ form.trigger_conditions.value|default:workflow.trigger_conditions }}</textarea>
+                        <div class="help-text">
+                            Use JSON format for complex conditions or plain text for simple rules. Leave empty to trigger on all events of the selected type.
+                        </div>
+                        {% if form.trigger_conditions.errors %}
+                            <div class="text-danger mt-1">{{ form.trigger_conditions.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Actions Configuration Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-cogs me-2"></i>Actions Configuration</h3>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Advanced Feature:</strong> Action configuration is currently being enhanced. Contact your administrator for complex action setups.
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_actions" class="form-label">Actions</label>
+                        <textarea class="form-control" 
+                                  id="id_actions" 
+                                  name="actions" 
+                                  rows="5" 
+                                  placeholder="Define the actions this workflow should perform when triggered...">{{ form.actions.value|default:workflow.actions }}</textarea>
+                        <div class="help-text">
+                            Describe the actions in detail. For complex automation, use JSON format or contact support for assistance.
+                        </div>
+                        {% if form.actions.errors %}
+                            <div class="text-danger mt-1">{{ form.actions.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <a href="{% url 'analytics:workflow_detail' workflow.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counters
+    function setupCharacterCounter(inputId, counterId, maxLength) {
+        const input = document.getElementById(inputId);
+        const counter = document.getElementById(counterId);
+        const countSpan = counter.querySelector('span') || document.getElementById(counterId.replace('Counter', 'Count'));
+        
+        if (input && countSpan) {
+            function updateCounter() {
+                const length = input.value.length;
+                countSpan.textContent = length;
+                
+                // Update counter styling based on length
+                if (length > maxLength * 0.9) {
+                    counter.classList.add('danger');
+                    counter.classList.remove('warning');
+                } else if (length > maxLength * 0.7) {
+                    counter.classList.add('warning');
+                    counter.classList.remove('danger');
+                } else {
+                    counter.classList.remove('warning', 'danger');
+                }
+            }
+            
+            input.addEventListener('input', updateCounter);
+            updateCounter(); // Initial update
+        }
+    }
+    
+    setupCharacterCounter('id_name', 'nameCounter', 200);
+    setupCharacterCounter('id_description', 'descriptionCounter', 1000);
+    
+    // Trigger type descriptions
+    const triggerSelect = document.getElementById('id_trigger_type');
+    const descriptions = document.querySelectorAll('.trigger-description');
+    
+    function showTriggerDescription() {
+        // Hide all descriptions
+        descriptions.forEach(desc => {
+            desc.classList.remove('show');
+        });
+        
+        // Show the relevant description
+        const selectedValue = triggerSelect.value;
+        const targetDesc = document.getElementById(`trigger_${selectedValue}`);
+        if (targetDesc) {
+            targetDesc.classList.add('show');
+        }
+    }
+    
+    if (triggerSelect) {
+        triggerSelect.addEventListener('change', showTriggerDescription);
+        showTriggerDescription(); // Initial call
+    }
+    
+    // Form validation
+    const form = document.getElementById('workflowEditForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const nameInput = document.getElementById('id_name');
+            const triggerInput = document.getElementById('id_trigger_type');
+            
+            let isValid = true;
+            
+            // Validate required fields
+            if (!nameInput.value.trim()) {
+                isValid = false;
+                nameInput.classList.add('is-invalid');
+            } else {
+                nameInput.classList.remove('is-invalid');
+            }
+            
+            if (!triggerInput.value) {
+                isValid = false;
+                triggerInput.classList.add('is-invalid');
+            } else {
+                triggerInput.classList.remove('is-invalid');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required fields before saving.');
+            }
+        });
+    }
+    
+    // Auto-save draft functionality (optional enhancement)
+    let autoSaveTimeout;
+    const formInputs = form.querySelectorAll('input, textarea, select');
+    
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                // Could implement auto-save draft here
+                console.log('Auto-save triggered (not implemented)');
+            }, 5000); // Save after 5 seconds of inactivity
+        });
+    });
+});
+</script>
+{% endblock %}

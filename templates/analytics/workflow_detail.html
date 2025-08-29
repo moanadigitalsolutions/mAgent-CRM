@@ -1,0 +1,523 @@
+{% extends 'base.html' %}
+{% load analytics_extras %}
+
+{% block title %}{{ workflow.name }} - Workflow Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .workflow-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .workflow-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 10px;
+        box-shadow: 0 0.15rem 1.75rem rgba(58, 59, 69, 0.15);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+    
+    .workflow-card:hover {
+        box-shadow: 0 0.25rem 2rem rgba(58, 59, 69, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .action-btn {
+        border-radius: 25px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        margin: 0.25rem;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .trigger-info {
+        background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        border-bottom: 1px solid #e3e6f0;
+        padding: 0.75rem 0;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #5a5c69;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-value {
+        color: #858796;
+    }
+    
+    .execution-history {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .execution-item {
+        border-left: 4px solid #e3e6f0;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fc;
+        border-radius: 0 5px 5px 0;
+        transition: all 0.3s ease;
+    }
+    
+    .execution-item:hover {
+        border-left-color: #4e73df;
+        background: #fff;
+    }
+    
+    .execution-success {
+        border-left-color: #1cc88a;
+    }
+    
+    .execution-failed {
+        border-left-color: #e74a3b;
+    }
+    
+    .execution-pending {
+        border-left-color: #f6c23e;
+    }
+    
+    .stats-card {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-success {
+        background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
+    }
+    
+    .stats-failed {
+        background: linear-gradient(135deg, #e74a3b 0%, #c0392b 100%);
+    }
+    
+    .stats-pending {
+        background: linear-gradient(135deg, #f6c23e 0%, #f1c40f 100%);
+    }
+    
+    .stats-total {
+        background: linear-gradient(135deg, #4e73df 0%, #2e59d9 100%);
+    }
+    
+    .breadcrumb-item a {
+        color: #4e73df;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'analytics:workflow_list' %}">Workflows</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ workflow.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Workflow Header -->
+    <div class="workflow-header p-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-cogs me-2"></i>{{ workflow.name }}
+                </h1>
+                <p class="mb-3 opacity-75">{{ workflow.description }}</p>
+                <div class="d-flex align-items-center">
+                    <span class="status-badge {% if workflow.is_active %}status-active{% else %}status-inactive{% endif %} me-3">
+                        {% if workflow.is_active %}
+                            <i class="fas fa-play me-1"></i>Active
+                        {% else %}
+                            <i class="fas fa-pause me-1"></i>Inactive
+                        {% endif %}
+                    </span>
+                    <small class="opacity-75">
+                        <i class="fas fa-calendar me-1"></i>
+                        Created {{ workflow.created_at|date:"M d, Y" }}
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex flex-wrap justify-content-end">
+                    {% if workflow.is_active %}
+                        <form method="post" action="{% url 'analytics:workflow_toggle_active' workflow.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="deactivate">
+                            <button type="submit" class="action-btn btn btn-warning">
+                                <i class="fas fa-pause me-1"></i>Deactivate
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'analytics:workflow_toggle_active' workflow.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="activate">
+                            <button type="submit" class="action-btn btn btn-success">
+                                <i class="fas fa-play me-1"></i>Activate
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{% url 'analytics:workflow_edit' workflow.id %}" class="action-btn btn btn-primary">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <button type="button" class="action-btn btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Workflow Details -->
+        <div class="col-lg-8">
+            <!-- Trigger Information -->
+            <div class="workflow-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Trigger Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="trigger-info">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-label">Trigger Type</div>
+                                <div class="info-value">
+                                    <i class="fas fa-arrow-right me-1"></i>
+                                    {{ workflow.get_trigger_type_display }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-label">Trigger Conditions</div>
+                                <div class="info-value">
+                                    {% if workflow.trigger_conditions %}
+                                        {{ workflow.trigger_conditions }}
+                                    {% else %}
+                                        <em>No specific conditions</em>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trigger-description mt-3">
+                        <h6>How it works:</h6>
+                        <p class="text-muted mb-0">
+                            {% if workflow.trigger_type == 'new_customer' %}
+                                This workflow automatically triggers whenever a new customer is added to the system.
+                            {% elif workflow.trigger_type == 'order_placed' %}
+                                This workflow runs when a customer places a new order.
+                            {% elif workflow.trigger_type == 'payment_received' %}
+                                This workflow activates when a payment is successfully processed.
+                            {% elif workflow.trigger_type == 'task_completed' %}
+                                This workflow starts when a task is marked as completed.
+                            {% elif workflow.trigger_type == 'manual' %}
+                                This workflow can only be triggered manually by users.
+                            {% elif workflow.trigger_type == 'scheduled' %}
+                                This workflow runs on a scheduled basis.
+                            {% else %}
+                                Custom trigger configuration.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Configuration -->
+            <div class="workflow-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>Actions Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if workflow.actions %}
+                        <div class="actions-list">
+                            {{ workflow.actions|linebreaks }}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                            <h6>No Actions Configured</h6>
+                            <p class="text-muted">This workflow doesn't have any actions configured yet.</p>
+                            <a href="{% url 'analytics:workflow_edit' workflow.id %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Add Actions
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Execution History -->
+            <div class="workflow-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Execution History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if executions %}
+                        <div class="execution-history">
+                            {% for execution in executions %}
+                                <div class="execution-item execution-{{ execution.status }}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                {% if execution.status == 'completed' %}
+                                                    <i class="fas fa-check-circle text-success me-1"></i>Completed
+                                                {% elif execution.status == 'failed' %}
+                                                    <i class="fas fa-times-circle text-danger me-1"></i>Failed
+                                                {% elif execution.status == 'pending' %}
+                                                    <i class="fas fa-clock text-warning me-1"></i>Pending
+                                                {% else %}
+                                                    <i class="fas fa-spinner text-info me-1"></i>Running
+                                                {% endif %}
+                                            </h6>
+                                            <p class="mb-1 text-muted">
+                                                <small>
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    {{ execution.started_at|date:"M d, Y H:i" }}
+                                                </small>
+                                            </p>
+                                            {% if execution.error_message %}
+                                                <div class="alert alert-danger alert-sm mb-0">
+                                                    <small>{{ execution.error_message }}</small>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-end">
+                                            {% if execution.completed_at %}
+                                                <small class="text-muted">
+                                                    Duration: {{ execution.completed_at|timeuntil:execution.started_at }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clock fa-2x text-muted mb-3"></i>
+                            <h6>No Executions Yet</h6>
+                            <p class="text-muted">This workflow hasn't been executed yet.</p>
+                            {% if workflow.is_active %}
+                                <p class="text-success">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Workflow is active and ready to run when triggered.
+                                </p>
+                            {% else %}
+                                <p class="text-warning">
+                                    <i class="fas fa-pause-circle me-1"></i>
+                                    Activate the workflow to start processing triggers.
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Execution Statistics -->
+            <div class="row">
+                <div class="col-6">
+                    <div class="stats-card stats-total">
+                        <h3>{{ total_executions }}</h3>
+                        <p class="mb-0">Total Runs</p>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="stats-card stats-success">
+                        <h3>{{ successful_executions }}</h3>
+                        <p class="mb-0">Successful</p>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="stats-card stats-failed">
+                        <h3>{{ failed_executions }}</h3>
+                        <p class="mb-0">Failed</p>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="stats-card stats-pending">
+                        <h3>{{ pending_executions }}</h3>
+                        <p class="mb-0">Pending</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow Information -->
+            <div class="workflow-card">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Workflow Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <div class="info-label">ID</div>
+                        <div class="info-value">#{{ workflow.id }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Created</div>
+                        <div class="info-value">{{ workflow.created_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Updated</div>
+                        <div class="info-value">{{ workflow.updated_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Created By</div>
+                        <div class="info-value">
+                            {% if workflow.created_by %}
+                                {{ workflow.created_by.get_full_name|default:workflow.created_by.username }}
+                            {% else %}
+                                <em>System</em>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if workflow.last_execution %}
+                        <div class="info-item">
+                            <div class="info-label">Last Execution</div>
+                            <div class="info-value">{{ workflow.last_execution|date:"M d, Y H:i" }}</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="workflow-card">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if workflow.trigger_type == 'manual' %}
+                        <form method="post" action="{% url 'analytics:workflow_execute_manual' workflow.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-play me-1"></i>Execute Now
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{% url 'analytics:workflow_edit' workflow.id %}" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-edit me-1"></i>Edit Workflow
+                    </a>
+                    <a href="#" class="btn btn-info w-100 mb-2" onclick="alert('Duplicate feature coming soon!')">
+                        <i class="fas fa-copy me-1"></i>Duplicate
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary w-100" onclick="alert('Export feature coming soon!')">
+                        <i class="fas fa-download me-1"></i>Export
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete Workflow</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning!</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to delete the workflow <strong>"{{ workflow.name }}"</strong>?</p>
+                <p class="text-muted">This will permanently remove the workflow and all its execution history.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="alert('Delete feature will be implemented soon!')">
+                    <i class="fas fa-trash me-1"></i>Delete Workflow
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add confirmation for activation/deactivation
+    const toggleForms = document.querySelectorAll('form[action*="workflow_toggle"]');
+    toggleForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const action = form.querySelector('input[name="action"]').value;
+            const message = action === 'activate' 
+                ? 'Are you sure you want to activate this workflow?' 
+                : 'Are you sure you want to deactivate this workflow?';
+            
+            if (!confirm(message)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // Auto-refresh execution history every 30 seconds if there are pending executions
+    const pendingExecutions = document.querySelectorAll('.execution-pending');
+    if (pendingExecutions.length > 0) {
+        setTimeout(() => {
+            location.reload();
+        }, 30000);
+    }
+});
+</script>
+{% endblock %}

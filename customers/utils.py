@@ -233,3 +233,243 @@ def get_duplicate_summary_stats():
         'total_customers': total_customers,
         'confidence_breakdown': confidence_breakdown
     }
+
+
+def combine_customer_data(primary_customer, duplicate_customer, field_selections=None):
+    """
+    Combine data from two customer records based on user selections.
+
+    Args:
+        primary_customer: The customer record to keep as primary
+        duplicate_customer: The customer record to merge from
+        field_selections: Dict mapping field names to source ('primary' or 'duplicate')
+
+    Returns:
+        Dict with combined data and merge details
+    """
+    if field_selections is None:
+        field_selections = {}
+
+    combined_data = {}
+    merge_details = {
+        'fields_merged': [],
+        'data_sources': {},
+        'conflicts_resolved': []
+    }
+
+    # Define fields that can be merged
+    mergeable_fields = [
+        'first_name', 'last_name', 'mobile', 'email',
+        'street_address', 'suburb', 'city', 'postcode'
+    ]
+
+    for field in mergeable_fields:
+        primary_value = getattr(primary_customer, field)
+        duplicate_value = getattr(duplicate_customer, field)
+
+        # Determine which value to use
+        if field in field_selections:
+            source = field_selections[field]
+            if source == 'duplicate':
+                combined_data[field] = duplicate_value
+                merge_details['data_sources'][field] = 'duplicate'
+            else:
+                combined_data[field] = primary_value
+                merge_details['data_sources'][field] = 'primary'
+        else:
+            # Auto-resolve based on data quality
+            if field == 'email' and not primary_value and duplicate_value:
+                combined_data[field] = duplicate_value
+                merge_details['data_sources'][field] = 'duplicate'
+            elif field == 'mobile' and not primary_value and duplicate_value:
+                combined_data[field] = duplicate_value
+                merge_details['data_sources'][field] = 'duplicate'
+            elif field in ['first_name', 'last_name'] and len(str(duplicate_value or '')) > len(str(primary_value or '')):
+                combined_data[field] = duplicate_value
+                merge_details['data_sources'][field] = 'duplicate'
+            else:
+                combined_data[field] = primary_value
+                merge_details['data_sources'][field] = 'primary'
+
+        # Track if this was a conflict that needed resolution
+        if primary_value and duplicate_value and primary_value != duplicate_value:
+            merge_details['conflicts_resolved'].append({
+                'field': field,
+                'primary_value': primary_value,
+                'duplicate_value': duplicate_value,
+                'chosen': combined_data[field]
+            })
+
+    merge_details['fields_merged'] = list(combined_data.keys())
+    return combined_data, merge_details
+
+
+def merge_customer_files(primary_customer, duplicate_customer):
+    """
+    Handle file merging during customer merge operation.
+
+    Returns:
+        Dict with file merge information
+    """
+    from .models import CustomerFile
+
+    primary_files = CustomerFile.objects.filter(customer=primary_customer)
+    duplicate_files = CustomerFile.objects.filter(customer=duplicate_customer)
+
+    file_info = {
+        'primary_files': [{'id': f.id, 'name': f.file.name, 'type': f.file_type} for f in primary_files],
+        'duplicate_files': [{'id': f.id, 'name': f.file.name, 'type': f.file_type} for f in duplicate_files],
+        'files_to_transfer': []
+    }
+
+    # Identify files that should be transferred
+    duplicate_file_names = {f.file.name for f in duplicate_files}
+    primary_file_names = {f.file.name for f in primary_files}
+
+    # Files in duplicate that don't exist in primary
+    for file in duplicate_files:
+        if file.file.name not in primary_file_names:
+            file_info['files_to_transfer'].append({
+                'id': file.id,
+                'name': file.file.name,
+                'type': file.file_type,
+                'action': 'transfer'
+            })
+
+    return file_info
+
+
+def merge_customer_notes(primary_customer, duplicate_customer):
+    """
+    Handle note merging during customer merge operation.
+
+    Returns:
+        Dict with note merge information
+    """
+    from .models import CustomerNote
+
+    primary_notes = CustomerNote.objects.filter(customer=primary_customer)
+    duplicate_notes = CustomerNote.objects.filter(customer=duplicate_customer)
+
+    note_info = {
+        'primary_notes_count': primary_notes.count(),
+        'duplicate_notes_count': duplicate_notes.count(),
+        'notes_to_transfer': duplicate_notes.count(),
+        'oldest_note_date': None,
+        'newest_note_date': None
+    }
+
+    if duplicate_notes.exists():
+        note_info['oldest_note_date'] = duplicate_notes.order_by('created_at').first().created_at
+        note_info['newest_note_date'] = duplicate_notes.order_by('-created_at').first().created_at
+
+    return note_info
+
+
+def merge_customer_tags(primary_customer, duplicate_customer):
+    """
+    Handle tag merging during customer merge operation.
+
+    Returns:
+        Dict with tag merge information
+    """
+    primary_tags = set(primary_customer.tags.all())
+    duplicate_tags = set(duplicate_customer.tags.all())
+
+    tag_info = {
+        'primary_tags': [{'id': t.id, 'name': t.name} for t in primary_tags],
+        'duplicate_tags': [{'id': t.id, 'name': t.name} for t in duplicate_tags],
+        'tags_to_add': []
+    }
+
+    # Tags in duplicate that don't exist in primary
+    for tag in duplicate_tags:
+        if tag not in primary_tags:
+            tag_info['tags_to_add'].append({
+                'id': tag.id,
+                'name': tag.name,
+                'action': 'add'
+            })
+
+    return tag_info
+
+
+def perform_customer_merge(primary_customer, duplicate_customer, field_selections=None, user=None, notes=""):
+    """
+    Perform the actual merge of two customer records.
+
+    Args:
+        primary_customer: Customer to keep
+        duplicate_customer: Customer to merge from and delete
+        field_selections: Dict of field selections
+        user: User performing the merge
+        notes: Optional notes about the merge
+
+    Returns:
+        Tuple of (success, merge_record, error_message)
+    """
+    from .models import DuplicateMerge, CustomerFile, CustomerNote
+    from django.db import transaction
+
+    try:
+        with transaction.atomic():
+            # Combine the data
+            combined_data, merge_details = combine_customer_data(
+                primary_customer, duplicate_customer, field_selections
+            )
+
+            # Update primary customer with combined data
+            for field, value in combined_data.items():
+                setattr(primary_customer, field, value)
+            primary_customer.save()
+
+            # Transfer files
+            file_info = merge_customer_files(primary_customer, duplicate_customer)
+            for file_data in file_info['files_to_transfer']:
+                try:
+                    file_obj = CustomerFile.objects.get(id=file_data['id'])
+                    file_obj.customer = primary_customer
+                    file_obj.save()
+                except CustomerFile.DoesNotExist:
+                    continue
+
+            # Transfer notes
+            duplicate_notes = CustomerNote.objects.filter(customer=duplicate_customer)
+            for note in duplicate_notes:
+                note.customer = primary_customer
+                note.save()
+
+            # Add tags
+            tag_info = merge_customer_tags(primary_customer, duplicate_customer)
+            for tag_data in tag_info['tags_to_add']:
+                try:
+                    from .models import Tag
+                    tag = Tag.objects.get(id=tag_data['id'])
+                    primary_customer.tags.add(tag)
+                except Tag.DoesNotExist:
+                    continue
+
+            # Create merge record
+            merge_record = DuplicateMerge.objects.create(
+                primary_customer=primary_customer,
+                duplicate_customer=duplicate_customer,
+                action_taken='merge',
+                merged_data={
+                    'combined_data': combined_data,
+                    'merge_details': merge_details,
+                    'file_info': file_info,
+                    'note_info': merge_customer_notes(primary_customer, duplicate_customer),
+                    'tag_info': tag_info
+                },
+                notes=notes,
+                performed_by=user
+            )
+
+            # Mark duplicate as inactive instead of deleting
+            duplicate_customer.is_active = False
+            duplicate_customer.save()
+
+            return True, merge_record, None
+
+    except Exception as e:
+        return False, None, str(e)
