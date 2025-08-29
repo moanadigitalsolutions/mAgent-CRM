@@ -168,9 +168,17 @@ def find_potential_duplicates(customer=None, email=None, mobile=None, first_name
 
 def get_duplicate_summary():
     """Get a summary of potential duplicates across all customers."""
-    all_customers = Customer.objects.all()
+    # Only check active customers
+    all_customers = Customer.objects.filter(is_active=True)
     duplicate_groups = []
     processed_ids = set()
+    
+    # Get already merged customer pairs to exclude them
+    from .models import DuplicateMerge
+    merged_pairs = set()
+    for merge in DuplicateMerge.objects.all():
+        merged_pairs.add((merge.primary_customer.id, merge.duplicate_customer.id))
+        merged_pairs.add((merge.duplicate_customer.id, merge.primary_customer.id))
     
     for customer in all_customers:
         if customer.id in processed_ids:
@@ -181,19 +189,28 @@ def get_duplicate_summary():
         # Only include groups with high confidence duplicates
         high_confidence_duplicates = [d for d in duplicates if d['confidence_score'] >= 30.0]
         
-        if high_confidence_duplicates:
+        # Filter out already merged pairs and inactive customers
+        filtered_duplicates = []
+        for dup in high_confidence_duplicates:
+            dup_customer = dup['customer']
+            # Skip if already merged or customer is inactive
+            if ((customer.id, dup_customer.id) not in merged_pairs and 
+                dup_customer.is_active):
+                filtered_duplicates.append(dup)
+        
+        if filtered_duplicates:
             # Mark all customers in this group as processed
             group_ids = {customer.id}
-            for dup in high_confidence_duplicates:
+            for dup in filtered_duplicates:
                 group_ids.add(dup['customer'].id)
             
             # Only add if we haven't processed this group yet
             if not group_ids.intersection(processed_ids):
                 duplicate_groups.append({
                     'primary_customer': customer,
-                    'duplicates': high_confidence_duplicates,
-                    'group_size': len(high_confidence_duplicates) + 1,
-                    'max_confidence': max(d['confidence_score'] for d in high_confidence_duplicates)
+                    'duplicates': filtered_duplicates,
+                    'group_size': len(filtered_duplicates) + 1,
+                    'max_confidence': max(d['confidence_score'] for d in filtered_duplicates)
                 })
                 processed_ids.update(group_ids)
     

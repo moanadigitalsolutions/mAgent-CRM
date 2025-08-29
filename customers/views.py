@@ -1125,6 +1125,28 @@ def perform_customer_merge(request, primary_id, duplicate_id):
         primary_customer = get_object_or_404(Customer, pk=primary_id)
         duplicate_customer = get_object_or_404(Customer, pk=duplicate_id)
 
+        # Check if these customers were already merged
+        from .models import DuplicateMerge
+        existing_merge = DuplicateMerge.objects.filter(
+            primary_customer=primary_customer,
+            duplicate_customer=duplicate_customer
+        ).first()
+        
+        if existing_merge:
+            return JsonResponse({
+                'success': False, 
+                'error': f'These customers were already merged on {existing_merge.performed_at.strftime("%Y-%m-%d %H:%M")}',
+                'already_merged': True
+            }, status=400)
+
+        # Check if duplicate is already inactive
+        if not duplicate_customer.is_active:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot merge an inactive customer',
+                'already_inactive': True
+            }, status=400)
+
         # Get field selections from POST data
         field_selections = {}
         for key, value in request.POST.items():
