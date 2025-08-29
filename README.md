@@ -16,6 +16,11 @@ A modern, feature-rich Customer Relationship Management (CRM) system built with 
 - **Real-time Updates**: AJAX-powered inline editing with instant save
 
 ### Advanced Features
+- **Duplicate Detection System**: Intelligent duplicate customer identification
+  - Advanced algorithm using fuzzy string matching and phone number analysis
+  - Configurable confidence scoring with match reason explanations
+  - Merge preview and history tracking with full audit trail
+  - Group-based duplicate management with multiple action options
 - **Custom Fields System**: Add unlimited custom fields to customer profiles
   - Text, Number, Email, Date, Boolean, Textarea, and Dropdown field types
   - Required/Optional field configuration
@@ -29,6 +34,11 @@ A modern, feature-rich Customer Relationship Management (CRM) system built with 
   - City-based filtering
   - Status-based filtering
   - Sortable columns
+- **Analytics & Automation**: Comprehensive business intelligence
+  - Email automation with template management
+  - Task automation and workflow creation
+  - Lead scoring with intelligent qualification
+  - Advanced analytics dashboard with insights
 
 ### User Interface
 - **Responsive Design**: Mobile-friendly interface that works on all devices
@@ -40,8 +50,16 @@ A modern, feature-rich Customer Relationship Management (CRM) system built with 
 ### Data Management
 - **SQLite Database**: Lightweight, file-based database perfect for small to medium businesses
 - **Data Validation**: Comprehensive validation for all input fields
+- **Duplicate Management**: Advanced duplicate detection with merge capabilities
 - **Soft Deletes**: Customers are deactivated rather than permanently deleted
 - **Audit Trail**: Created and updated timestamps for all records
+- **Data Import/Export**: CSV import and export functionality
+
+### Testing & Quality Assurance
+- **Playwright Testing**: Comprehensive end-to-end testing with browser automation
+- **Unit Testing**: Django test framework with 97% coverage
+- **Integration Testing**: Full workflow testing including duplicate detection
+- **Visual Testing**: Screenshot-based validation of UI components
 
 ## 🚀 Quick Start
 
@@ -91,7 +109,17 @@ A modern, feature-rich Customer Relationship Management (CRM) system built with 
 
 7. **Create Sample Data (Optional)**
    ```bash
+   # Create basic sample customers
    python manage.py create_sample_data
+   
+   # Create test data for duplicate detection
+   python test_duplicates.py
+   
+   # Create lead scoring test data
+   python create_lead_scoring_data.py
+   
+   # Create task automation test data
+   python create_task_automation_data.py
    ```
 
 8. **Start Development Server**
@@ -102,6 +130,8 @@ A modern, feature-rich Customer Relationship Management (CRM) system built with 
 9. **Access the Application**
    - Main Application: http://127.0.0.1:8000/
    - Admin Panel: http://127.0.0.1:8000/admin/
+   - Duplicate Detection: http://127.0.0.1:8000/customers/duplicates/
+   - Analytics Dashboard: http://127.0.0.1:8000/analytics/
 
 ## 📱 Application Structure
 
@@ -115,7 +145,15 @@ A modern, feature-rich Customer Relationship Management (CRM) system built with 
 - **Customer List**: Sortable, filterable table with inline editing
 - **Customer Details**: Comprehensive view with all information and files
 - **Customer Forms**: User-friendly forms for creating and editing customers
+- **Duplicate Detection**: Intelligent duplicate identification with merge capabilities
 - **Bulk Actions**: Select and perform actions on multiple customers
+
+### Analytics & Automation
+- **Analytics Dashboard**: Business intelligence with customer insights and trends
+- **Email Automation**: Automated email sequences and template management
+- **Task Automation**: Workflow creation and reminder systems
+- **Lead Scoring**: Intelligent lead qualification and prioritization
+- **Reporting**: Custom report generation and scheduled delivery
 
 ### Custom Fields
 - **Field Management**: Create and manage custom fields
@@ -149,6 +187,11 @@ The main configuration is in `magent/settings.py`:
 - **CustomField**: Dynamic field definitions
 - **CustomerCustomFieldValue**: Values for custom fields per customer
 - **CustomerFile**: File attachments for customers
+- **DuplicateMerge**: Tracking of duplicate customer merge operations
+- **AnalyticsEvent**: Event tracking for business intelligence
+- **Task**: Automated task management and workflows
+- **WorkflowTemplate**: Reusable workflow definitions
+- **LeadScoringRule**: Configurable lead scoring criteria
 
 ### Views
 - **Class-based Views**: Modern Django views for scalability
@@ -193,7 +236,31 @@ The main configuration is in `magent/settings.py`:
 
 ### Running Tests
 ```bash
+# Run all tests
 python manage.py test
+
+# Run specific app tests
+python manage.py test customers
+python manage.py test analytics
+
+# Run duplicate detection tests
+python test_duplicates.py
+
+# Generate test coverage report
+coverage run --source='.' manage.py test
+coverage report
+```
+
+### Playwright Testing
+```bash
+# Install Playwright dependencies
+npm install playwright
+
+# Run end-to-end tests
+python -m pytest playwright_tests/
+
+# Run specific feature tests
+python -m pytest playwright_tests/test_duplicate_detection.py
 ```
 
 ### Database Management
@@ -242,29 +309,37 @@ For support and questions:
 ## 🔄 Development Roadmap
 
 ### 📋 **Tier 1: COMPLETE** ✅
-- **Notes & Timeline System** - Interactive customer communication tracking
-- **Duplicate Detection** - Intelligent duplicate customer identification
-- **CSV Import/Export** - Robust data import and export capabilities
-- **Real-time Validation** - Inline form validation with instant feedback
-- **Comprehensive Testing** - 97% test coverage with quality assurance
+- **✅ Notes & Timeline System** - Interactive customer communication tracking
+- **✅ Duplicate Detection** - Intelligent duplicate customer identification with merge capabilities
+- **✅ CSV Import/Export** - Robust data import and export capabilities
+- **✅ Real-time Validation** - Inline form validation with instant feedback
+- **✅ Comprehensive Testing** - 97% test coverage with Playwright automation
 
-### 🚀 **Tier 2: IN PLANNING** 📋
-Advanced analytics and automation features - See `TIER_2_DEVELOPMENT_PLAN.md` for detailed specifications:
+### 🚀 **Tier 2: COMPLETE** ✅
+- **✅ Analytics Dashboard** - Customer insights, trends, and business intelligence
+- **✅ Email Automation** - Automated sequences and customer communication
+- **✅ Workflow Automation** - Task management and process automation
+- **✅ Lead Scoring** - Intelligent lead qualification and prioritization
+- **✅ Advanced Reporting** - Custom report builder with data visualization
 
-- **Analytics Dashboard**: Customer insights, trends, and business intelligence
-- **Advanced Reporting**: Custom report builder with scheduled delivery
-- **Email Automation**: Automated sequences and customer communication
-- **Workflow Automation**: Task management and process automation
-- **Lead Scoring**: Intelligent lead qualification and prioritization
+### 🔮 **Tier 3: FUTURE ROADMAP** 📋
 - **API Integration**: REST API and third-party service connections
-
-### 🔮 **Future Tiers: ROADMAP**
 - **Multi-tenant Support**: Enterprise-level organization management
 - **Mobile Application**: Native iOS/Android apps
 - **Advanced Integrations**: ERP, accounting, and business system connections
 - **AI/ML Features**: Predictive analytics and intelligent recommendations
 
 ## 📋 Changelog
+
+### Version 2.0.0 (Current - August 29, 2025) ✅
+- **🔍 Duplicate Detection System**: Advanced algorithm with fuzzy matching
+- **📊 Analytics Dashboard**: Business intelligence and customer insights
+- **🤖 Email Automation**: Automated sequences and template management
+- **⚡ Task Automation**: Workflow creation and reminder systems
+- **🎯 Lead Scoring**: Intelligent lead qualification system
+- **🔄 Data Import/Export**: Enhanced CSV capabilities
+- **🧪 Playwright Testing**: Comprehensive end-to-end testing
+- **📈 Performance Improvements**: Optimized queries and caching
 
 ### Version 1.0.0 (Initial Release)
 - Complete customer management system
